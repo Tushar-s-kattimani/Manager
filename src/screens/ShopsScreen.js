@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, FlatList, ScrollView, useWindowDimensions } from 'react-native';
-import { Text, useTheme, Avatar, FAB, Dialog, Portal, TextInput, Button, IconButton, Chip, DataTable, Searchbar } from 'react-native-paper';
+import { Text, useTheme, Avatar, Card, FAB, Dialog, Portal, TextInput, Button, IconButton, Chip, DataTable, Searchbar } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
 import * as Animatable from 'react-native-animatable';
 import { useAppContext } from '../context/AppContext';
