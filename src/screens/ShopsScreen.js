@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, ScrollView, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, FlatList, ScrollView, useWindowDimensions, Linking } from 'react-native';
 import { Text, useTheme, Avatar, Card, FAB, Dialog, Portal, TextInput, Button, IconButton, Chip, DataTable, Searchbar } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
 import * as Animatable from 'react-native-animatable';
@@ -32,6 +32,12 @@ export default function ShopsScreen({ navigation }) {
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [shopToDelete, setShopToDelete] = useState(null);
   const [deletePassword, setDeletePassword] = useState('');
+
+  // Mobile Number State
+  const [mobileDialogVisible, setMobileDialogVisible] = useState(false);
+  const [mobileShopToUpdate, setMobileShopToUpdate] = useState(null);
+  const [mobileInput, setMobileInput] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
 
   const showDialog = (shop = null) => {
     if (shop) {
@@ -143,29 +149,25 @@ export default function ShopsScreen({ navigation }) {
             <table>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Owner</th>
-                  <th>Area / Place</th>
-                  <th>Mobile</th>
-                  <th>Salesman</th>
-                  <th>Balance</th>
+                  <th>Shop Name</th>
+                  <th>Place</th>
+                  <th>Date Given</th>
+                  <th>Amount</th>
                 </tr>
               </thead>
               <tbody>
       `;
 
       filteredShops.forEach(shop => {
-        const assignedVehicle = vehicles.find(v => v.id === shop.vehicleId);
-        const salesmanName = assignedVehicle ? assignedVehicle.salesman : 'Unknown';
         const balanceClass = shop.currentBalance > 0 ? 'balance-red' : 'balance-green';
+        const dateGiven = shop.orderDate || shop.lastTransactionDate || 'N/A';
+        const placeText = shop.place || shop.area || '';
         
         htmlContent += `
           <tr>
             <td>${shop.name || ''}</td>
-            <td>${shop.ownerName || ''}</td>
-            <td>${shop.area || ''} ${shop.place ? '(' + shop.place + ')' : ''}</td>
-            <td>${shop.mobile || ''}</td>
-            <td>${salesmanName}</td>
+            <td>${placeText}</td>
+            <td>${dateGiven}</td>
             <td class="${balanceClass}">₹${shop.currentBalance || 0}</td>
           </tr>
         `;
@@ -173,13 +175,28 @@ export default function ShopsScreen({ navigation }) {
 
       htmlContent += `
               </tbody>
+              <tfoot>
+                <tr>
+                  <th colspan="3" style="text-align: right;">Total Balance:</th>
+                  <th style="color: #d32f2f;">₹${totalFilteredBalance}</th>
+                </tr>
+              </tfoot>
             </table>
           </body>
         </html>
       `;
 
       if (Platform.OS === 'web') {
-        await Print.printAsync({ html: htmlContent });
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        iframe.contentDocument.write(htmlContent);
+        iframe.contentDocument.close();
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
       } else {
         const { uri } = await Print.printToFileAsync({ html: htmlContent });
         const isAvailable = await Sharing.isAvailableAsync();
@@ -192,6 +209,86 @@ export default function ShopsScreen({ navigation }) {
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF');
+    }
+  };
+
+  const generateShopMessage = (shop, assignedVehicle, isWhatsApp = false) => {
+    let msg = isWhatsApp ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n\n` : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n\n`;
+    
+    if (shop.currentBalance > 0) {
+      msg += `⚠️ This is a reminder regarding your outstanding debt.\n\n`;
+    } else {
+      msg += `📋 This is a summary of your account with us.\n\n`;
+    }
+    
+    const dateGiven = shop.orderDate || shop.lastTransactionDate || 'N/A';
+    const placeStr = shop.place || shop.area ? `(${shop.place || shop.area})` : '';
+    
+    if (isWhatsApp) {
+      msg += `🏬 *Shop:* ${shop.name} ${placeStr}\n`;
+      msg += `📅 *Date Given:* ${dateGiven}\n`;
+      msg += `💰 *Total Balance: ₹${shop.currentBalance}*\n`;
+      msg += `👤 *Salesman:* ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
+      if (shop.currentBalance > 0) {
+        msg += `Please arrange for the payment at the earliest.`;
+      }
+    } else {
+      msg += `🏬 Shop: ${shop.name} ${placeStr}\n`;
+      msg += `📅 Date Given: ${dateGiven}\n`;
+      msg += `💰 Total Balance: ₹${shop.currentBalance}\n`;
+      msg += `👤 Salesman: ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
+      if (shop.currentBalance > 0) {
+        msg += `Please arrange for the payment at the earliest.`;
+      }
+    }
+    
+    return encodeURIComponent(msg.trim());
+  };
+
+  const sendShopSMS = (shop, assignedVehicle) => {
+    if (!shop.mobile) { 
+      setMobileShopToUpdate(shop);
+      setPendingAction({ type: 'sms', assignedVehicle });
+      setMobileInput('');
+      setMobileDialogVisible(true);
+      return; 
+    }
+    const msg = generateShopMessage(shop, assignedVehicle, false);
+    const separator = Platform.OS === 'ios' ? '&' : '?';
+    Linking.openURL(`sms:${shop.mobile}${separator}body=${msg}`);
+  };
+
+  const sendShopWhatsApp = (shop, assignedVehicle) => {
+    if (!shop.mobile) { 
+      setMobileShopToUpdate(shop);
+      setPendingAction({ type: 'whatsapp', assignedVehicle });
+      setMobileInput('');
+      setMobileDialogVisible(true);
+      return; 
+    }
+    const msg = generateShopMessage(shop, assignedVehicle, true);
+    Linking.openURL(`whatsapp://send?phone=${shop.mobile}&text=${msg}`);
+  };
+
+  const handleSaveMobile = () => {
+    if (mobileInput.trim() === '') {
+      alert("Please enter a valid mobile number.");
+      return;
+    }
+    
+    const updatedShop = { ...mobileShopToUpdate, mobile: mobileInput.trim() };
+    updateShop(mobileShopToUpdate.id, updatedShop);
+    setMobileDialogVisible(false);
+    
+    if (pendingAction) {
+      if (pendingAction.type === 'sms') {
+        const msg = generateShopMessage(updatedShop, pendingAction.assignedVehicle, false);
+        const separator = Platform.OS === 'ios' ? '&' : '?';
+        Linking.openURL(`sms:${updatedShop.mobile}${separator}body=${msg}`);
+      } else if (pendingAction.type === 'whatsapp') {
+        const msg = generateShopMessage(updatedShop, pendingAction.assignedVehicle, true);
+        Linking.openURL(`whatsapp://send?phone=${updatedShop.mobile}&text=${msg}`);
+      }
     }
   };
 
@@ -219,6 +316,23 @@ export default function ShopsScreen({ navigation }) {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                 <Avatar.Icon size={20} icon="account-tie" style={{ backgroundColor: '#E3F2FD', marginRight: 4 }} color="#1976D2" />
                 <Text variant="bodySmall" style={{ color: '#333' }}>{assignedVehicle?.salesman || 'No Salesman'} ({assignedVehicle?.name || 'Unknown'})</Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <Avatar.Icon size={20} icon="phone" style={{ backgroundColor: '#E8F5E9', marginRight: 4 }} color="#2E7D32" />
+                <Text variant="bodySmall" style={{ color: '#333', marginRight: 4 }}>{item.mobile || 'No mobile saved'}</Text>
+                <IconButton 
+                  icon="pencil" 
+                  size={16} 
+                  iconColor="#1976D2" 
+                  style={{ margin: 0, width: 24, height: 24 }} 
+                  onPress={() => {
+                    setMobileShopToUpdate(item);
+                    setPendingAction(null);
+                    setMobileInput(item.mobile || '');
+                    setMobileDialogVisible(true);
+                  }} 
+                />
               </View>
               
               <View style={{ flexDirection: 'row', marginTop: 12 }}>
@@ -250,6 +364,8 @@ export default function ShopsScreen({ navigation }) {
               )}
               
               <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                <IconButton icon="whatsapp" size={20} iconColor="#25D366" containerColor="#E8F5E9" style={{ margin: 0, marginRight: 8 }} onPress={() => sendShopWhatsApp(item, assignedVehicle)} />
+                <IconButton icon="message-text" size={20} iconColor="#007AFF" containerColor="#E3F2FD" style={{ margin: 0, marginRight: 8 }} onPress={() => sendShopSMS(item, assignedVehicle)} />
                 {item.currentBalance > 0 && (
                   <IconButton icon="cash-plus" size={20} iconColor="#4CAF50" containerColor="#E8F5E9" style={{ margin: 0, marginRight: 8 }} onPress={() => showPaymentDialog(item)} />
                 )}
@@ -405,6 +521,27 @@ export default function ShopsScreen({ navigation }) {
           <Dialog.Actions style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
             <Button onPress={() => setDeleteDialogVisible(false)} textColor="gray">Cancel</Button>
             <Button onPress={confirmDelete} buttonColor={theme.colors.error} mode="contained" style={{ marginLeft: 8, borderRadius: 8 }}>Delete</Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog visible={mobileDialogVisible} onDismiss={() => setMobileDialogVisible(false)} style={{ borderRadius: 16 }}>
+          <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Add Mobile Number</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ marginBottom: 16 }}>Please enter the mobile number for {mobileShopToUpdate?.name}.</Text>
+            <TextInput
+              label="Mobile Number"
+              mode="outlined"
+              keyboardType="phone-pad"
+              value={mobileInput}
+              onChangeText={setMobileInput}
+              theme={{ roundness: 10 }}
+            />
+          </Dialog.Content>
+          <Dialog.Actions style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+            <Button onPress={() => setMobileDialogVisible(false)} textColor="gray">Cancel</Button>
+            <Button onPress={handleSaveMobile} mode="contained" buttonColor={theme.colors.primary} style={{ marginLeft: 8, borderRadius: 8 }}>
+              {pendingAction ? 'Save & Send' : 'Save'}
+            </Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>

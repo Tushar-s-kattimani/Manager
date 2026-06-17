@@ -1,20 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Text, useTheme, TextInput, Button, Chip, Surface, Snackbar } from 'react-native-paper';
-import { DatePickerInput } from 'react-native-paper-dates';
+import { DatePickerModal } from 'react-native-paper-dates';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { useAppContext } from '../context/AppContext';
 
 export default function AddDebtScreen({ navigation }) {
   const theme = useTheme();
-  const { vehicles, addShop } = useAppContext();
+  const { vehicles, addShop, shops } = useAppContext();
 
   const [shopName, setShopName] = useState('');
   const [place, setPlace] = useState('');
+  const [mobile, setMobile] = useState('');
   const [balance, setBalance] = useState('');
-  const [orderDate, setOrderDate] = useState(new Date());
-  const [lastDueDate, setLastDueDate] = useState(new Date());
+  const [orderDateStr, setOrderDateStr] = useState('');
+  const [lastDueDateStr, setLastDueDateStr] = useState('');
+  const [orderDatePickerVisible, setOrderDatePickerVisible] = useState(false);
+  const [dueDatePickerVisible, setDueDatePickerVisible] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(vehicles.length > 0 ? vehicles[0].id : '');
   
   const [snackbarVisible, setSnackbarVisible] = useState(false);
@@ -27,13 +30,32 @@ export default function AddDebtScreen({ navigation }) {
     return `${d}-${m}-${y}`;
   };
 
-  const handleSave = async () => {
+  // Initialize dates on mount
+  useEffect(() => {
+    const today = formatDate(new Date());
+    setOrderDateStr(today);
+    setLastDueDateStr(today);
+  }, []);
+
+  useEffect(() => {
+    if (shopName.trim().length > 2) {
+      const existingShop = shops.find(s => s.name?.toLowerCase() === shopName.toLowerCase().trim());
+      if (existingShop && existingShop.mobile && !mobile) {
+        setMobile(existingShop.mobile);
+      }
+      if (existingShop && existingShop.place && !place) {
+        setPlace(existingShop.place);
+      }
+    }
+  }, [shopName]);
+
+  const handleSave = async (shouldClear = true) => {
     if (vehicles.length === 0) {
       alert("Please add a Salesman in the 'Vehicles' tab first!");
       return;
     }
     
-    if (!shopName || !place || !balance || !selectedVehicle || !lastDueDate) {
+    if (!shopName || !place || !balance || !selectedVehicle || !lastDueDateStr) {
       alert("Please fill all the details.");
       return;
     }
@@ -43,21 +65,24 @@ export default function AddDebtScreen({ navigation }) {
         name: shopName,
         place: place,
         ownerName: 'Unknown',
-        mobile: '',
+        mobile: mobile.trim(),
         area: place,
         vehicleId: selectedVehicle,
         currentBalance: parseFloat(balance),
-        orderDate: orderDate ? formatDate(orderDate) : formatDate(new Date()),
-        lastTransactionDate: lastDueDate ? formatDate(lastDueDate) : formatDate(new Date())
+        orderDate: orderDateStr || formatDate(new Date()),
+        lastTransactionDate: lastDueDateStr || formatDate(new Date())
       });
 
       setSnackbarVisible(true);
       
-      setShopName('');
-      setPlace('');
-      setBalance('');
-      setOrderDate(new Date());
-      setLastDueDate(new Date());
+      if (shouldClear) {
+        setShopName('');
+        setPlace('');
+        setMobile('');
+        setBalance('');
+        setOrderDateStr(formatDate(new Date()));
+        setLastDueDateStr(formatDate(new Date()));
+      }
     } catch (error) {
       console.error("Firebase Error: ", error);
       alert("Failed to save data. Please check your Firebase Database Rules! Make sure they are set to 'allow read, write: if true;'");
@@ -78,32 +103,31 @@ export default function AddDebtScreen({ navigation }) {
           <Surface style={styles.card} elevation={3}>
             <TextInput label="Shop Name" value={shopName} onChangeText={setShopName} mode="outlined" style={styles.input} left={<TextInput.Icon icon="store" color={theme.colors.primary} />} theme={{ roundness: 10 }} />
             <TextInput label="Place (Location)" value={place} onChangeText={setPlace} mode="outlined" style={styles.input} left={<TextInput.Icon icon="map-marker" color={theme.colors.primary} />} theme={{ roundness: 10 }} />
+            <TextInput label="Mobile Number (Optional)" value={mobile} onChangeText={setMobile} mode="outlined" keyboardType="phone-pad" style={styles.input} left={<TextInput.Icon icon="phone" color={theme.colors.primary} />} theme={{ roundness: 10 }} />
             
             <View style={styles.rowInputs}>
               <TextInput label="Pending Balance (₹)" value={balance} onChangeText={setBalance} mode="outlined" keyboardType="numeric" style={[styles.input, { flex: 1, marginRight: 8 }]} left={<TextInput.Icon icon="currency-inr" color={theme.colors.error} />} theme={{ roundness: 10 }} />
               <View style={{ flex: 1, marginLeft: 8 }}>
-                <DatePickerInput
-                  locale="en-GB"
-                  label="Order Date"
-                  value={orderDate}
-                  onChange={(d) => setOrderDate(d)}
-                  inputMode="start"
+                <TextInput
+                  label="Order Date (DD-MM-YYYY)"
+                  value={orderDateStr}
+                  onChangeText={setOrderDateStr}
                   mode="outlined"
                   style={styles.input}
+                  right={<TextInput.Icon icon="calendar" onPress={() => setOrderDatePickerVisible(true)} />}
                   theme={{ roundness: 10 }}
                 />
               </View>
             </View>
 
             <View style={{ marginBottom: 16 }}>
-              <DatePickerInput
-                locale="en-GB"
-                label="Last Due Date"
-                value={lastDueDate}
-                onChange={(d) => setLastDueDate(d)}
-                inputMode="start"
+              <TextInput
+                label="Last Due Date (DD-MM-YYYY)"
+                value={lastDueDateStr}
+                onChangeText={setLastDueDateStr}
                 mode="outlined"
                 style={styles.input}
+                right={<TextInput.Icon icon="calendar" onPress={() => setDueDatePickerVisible(true)} />}
                 theme={{ roundness: 10 }}
               />
             </View>
@@ -119,9 +143,14 @@ export default function AddDebtScreen({ navigation }) {
               ))}
             </View>
 
-            <Button mode="contained" onPress={handleSave} style={styles.button} contentStyle={{ paddingVertical: 10 }} buttonColor={theme.colors.primary} labelStyle={{ fontSize: 16, fontWeight: 'bold' }}>
-              SAVE DETAILS
-            </Button>
+            <View style={{ flexDirection: 'row', marginTop: 8 }}>
+              <Button mode="outlined" onPress={() => handleSave(true)} style={[styles.button, { flex: 1, marginRight: 8 }]} textColor={theme.colors.primary}>
+                SAVE & CLEAR
+              </Button>
+              <Button mode="contained" onPress={() => handleSave(false)} style={[styles.button, { flex: 1 }]} buttonColor={theme.colors.primary}>
+                SAVE & KEEP DATA
+              </Button>
+            </View>
           </Surface>
         </Animatable.View>
       </ScrollView>
@@ -129,6 +158,30 @@ export default function AddDebtScreen({ navigation }) {
       <Snackbar visible={snackbarVisible} onDismiss={() => setSnackbarVisible(false)} duration={3000} style={{ backgroundColor: '#4CAF50' }}>
         Record saved successfully!
       </Snackbar>
+
+      <DatePickerModal
+        locale="en-GB"
+        mode="single"
+        visible={orderDatePickerVisible}
+        onDismiss={() => setOrderDatePickerVisible(false)}
+        date={undefined}
+        onConfirm={(params) => {
+          setOrderDatePickerVisible(false);
+          setOrderDateStr(formatDate(params.date));
+        }}
+      />
+
+      <DatePickerModal
+        locale="en-GB"
+        mode="single"
+        visible={dueDatePickerVisible}
+        onDismiss={() => setDueDatePickerVisible(false)}
+        date={undefined}
+        onConfirm={(params) => {
+          setDueDatePickerVisible(false);
+          setLastDueDateStr(formatDate(params.date));
+        }}
+      />
     </View>
   );
 }

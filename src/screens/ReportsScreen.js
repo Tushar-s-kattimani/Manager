@@ -4,6 +4,8 @@ import { Text, useTheme, Card, List, Avatar, IconButton } from 'react-native-pap
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { useAppContext } from '../context/AppContext';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 export default function ReportsScreen() {
   const theme = useTheme();
@@ -26,14 +28,16 @@ export default function ReportsScreen() {
   const generateMessage = (salesman, isWhatsApp = false) => {
     let msg = '';
     if (isWhatsApp) {
-      msg = `*Hello ${salesman.salesman},*\n\n`;
+      msg = `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n\n`;
+      msg += `*Hello ${salesman.salesman},*\n\n`;
       msg += `🚚 *Vehicle Name:* ${salesman.name}\n`;
       msg += `👤 *Salesman Name:* ${salesman.salesman}\n`;
       msg += `📞 *Number:* ${salesman.salesmanMobile || 'N/A'}\n`;
       msg += `💰 *Total Debt:* Rs.${salesman.totalDebt}\n\n`;
       msg += `*Pending Collections:*\n`;
     } else {
-      msg = `Hello ${salesman.salesman},\n\n`;
+      msg = `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n\n`;
+      msg += `Hello ${salesman.salesman},\n\n`;
       msg += `🚚 Vehicle Name: ${salesman.name}\n`;
       msg += `👤 Salesman Name: ${salesman.salesman}\n`;
       msg += `📞 Number: ${salesman.salesmanMobile || 'N/A'}\n`;
@@ -75,7 +79,9 @@ export default function ReportsScreen() {
   };
 
   const generateAdminMessage = (isWhatsApp = false) => {
-    let msg = isWhatsApp ? `*Admin Master Report*\nTotal Outstanding: Rs.${grandTotalDebt}\n\n` : `Admin Master Report\nTotal Outstanding: Rs.${grandTotalDebt}\n\n`;
+    let msg = isWhatsApp 
+      ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n\n*Admin Master Report*\nTotal Outstanding: Rs.${grandTotalDebt}\n\n` 
+      : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n\nAdmin Master Report\nTotal Outstanding: Rs.${grandTotalDebt}\n\n`;
     
     salesmanData.forEach(salesman => {
       if (salesman.totalDebt > 0) {
@@ -124,6 +130,108 @@ export default function ReportsScreen() {
     Linking.openURL(`whatsapp://send?phone=919448860040&text=${msg}`);
   };
 
+  const downloadPDF = async () => {
+    try {
+      let htmlContent = `
+        <html>
+          <head>
+            <style>
+              @media print {
+                body { margin: 0; padding: 20px; font-family: Helvetica, Arial, sans-serif; }
+                table { page-break-after: auto; }
+                tr    { page-break-inside: avoid; page-break-after: auto; }
+                td    { page-break-inside: avoid; page-break-after: auto; }
+                thead { display: table-header-group; }
+                tfoot { display: table-footer-group; }
+              }
+              body { font-family: Helvetica, Arial, sans-serif; padding: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 30px; }
+              th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              h2, h3 { text-align: center; color: #333; }
+              .balance-red { color: #d32f2f; font-weight: bold; }
+              .balance-green { color: #388e3c; font-weight: bold; }
+              .salesman-header { background-color: #e3f2fd; padding: 10px; margin-top: 20px; font-weight: bold; font-size: 16px; border-radius: 4px; border: 1px solid #bbdefb; }
+            </style>
+          </head>
+          <body>
+            <h2>Admin Master Report</h2>
+            <p style="font-size: 18px; text-align: center; margin-bottom: 30px;"><strong>Total Outstanding:</strong> ₹${grandTotalDebt}</p>
+      `;
+
+      salesmanData.forEach(salesman => {
+        if (salesman.totalDebt > 0 || salesman.assignedShops.length > 0) {
+          htmlContent += `
+            <div class="salesman-header">
+              ${salesman.salesman || 'Unknown Salesman'} (Vehicle: ${salesman.name}) - Total Debt: ₹${salesman.totalDebt}
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Shop Name</th>
+                  <th>Area / Place</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          if (salesman.assignedShops.length === 0) {
+             htmlContent += `<tr><td colspan="3" style="text-align: center; color: gray;">No shops assigned.</td></tr>`;
+          } else {
+            salesman.assignedShops.forEach(shop => {
+              const balanceClass = shop.currentBalance > 0 ? 'balance-red' : 'balance-green';
+              htmlContent += `
+                <tr>
+                  <td>${shop.name || ''}</td>
+                  <td>${shop.place || shop.area || ''}</td>
+                  <td class="${balanceClass}">₹${shop.currentBalance || 0}</td>
+                </tr>
+              `;
+            });
+          }
+
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
+      });
+
+      htmlContent += `
+            <div style="margin-top: 40px; padding: 15px; background-color: #fce4e4; border: 1px solid #f8caca; border-radius: 4px; text-align: center;">
+              <h3 style="margin: 0; color: #d32f2f;">Grand Total Outstanding: ₹${grandTotalDebt}</h3>
+            </div>
+          </body>
+        </html>
+      `;
+
+      if (Platform.OS === 'web') {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        iframe.contentDocument.write(htmlContent);
+        iframe.contentDocument.close();
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      } else {
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(uri);
+        } else {
+          alert('Sharing is not available on this device');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF');
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient colors={[theme.colors.primary, '#001D36']} style={styles.headerGradient}>
@@ -133,6 +241,7 @@ export default function ReportsScreen() {
             <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', marginTop: 2 }}>₹{grandTotalDebt}</Text>
           </View>
           <View style={{ flexDirection: 'row' }}>
+            <IconButton icon="file-pdf-box" iconColor="#fff" containerColor="#D32F2F" size={20} onPress={downloadPDF} style={{ margin: 0, marginRight: 8 }} />
             <IconButton icon="whatsapp" iconColor="#fff" containerColor="#25D366" size={20} onPress={sendAdminWhatsApp} style={{ margin: 0, marginRight: 8 }} />
             <IconButton icon="message-text" iconColor="#fff" containerColor="#007AFF" size={20} onPress={sendAdminSMS} style={{ margin: 0 }} />
           </View>
