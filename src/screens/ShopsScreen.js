@@ -4,6 +4,9 @@ import { Text, useTheme, Avatar, Card, FAB, Dialog, Portal, TextInput, Button, I
 import { DatePickerModal } from 'react-native-paper-dates';
 import * as Animatable from 'react-native-animatable';
 import { useAppContext } from '../context/AppContext';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 
 export default function ShopsScreen({ navigation }) {
   const theme = useTheme();
@@ -111,6 +114,87 @@ export default function ShopsScreen({ navigation }) {
     return `${d}-${m}-${y}`;
   };
 
+  const downloadPDF = async () => {
+    try {
+      let htmlContent = `
+        <html>
+          <head>
+            <style>
+              @media print {
+                body { margin: 0; padding: 20px; font-family: Helvetica, Arial, sans-serif; }
+                table { page-break-after: auto; }
+                tr    { page-break-inside: avoid; page-break-after: auto; }
+                td    { page-break-inside: avoid; page-break-after: auto; }
+                thead { display: table-header-group; }
+                tfoot { display: table-footer-group; }
+              }
+              body { font-family: Helvetica, Arial, sans-serif; padding: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              h2 { text-align: center; color: #333; }
+              .balance-red { color: #d32f2f; font-weight: bold; }
+              .balance-green { color: #388e3c; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <h2>Shops Report</h2>
+            <p><strong>Total Balance:</strong> ₹${totalFilteredBalance}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Owner</th>
+                  <th>Area / Place</th>
+                  <th>Mobile</th>
+                  <th>Salesman</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      filteredShops.forEach(shop => {
+        const assignedVehicle = vehicles.find(v => v.id === shop.vehicleId);
+        const salesmanName = assignedVehicle ? assignedVehicle.salesman : 'Unknown';
+        const balanceClass = shop.currentBalance > 0 ? 'balance-red' : 'balance-green';
+        
+        htmlContent += `
+          <tr>
+            <td>${shop.name || ''}</td>
+            <td>${shop.ownerName || ''}</td>
+            <td>${shop.area || ''} ${shop.place ? '(' + shop.place + ')' : ''}</td>
+            <td>${shop.mobile || ''}</td>
+            <td>${salesmanName}</td>
+            <td class="${balanceClass}">₹${shop.currentBalance || 0}</td>
+          </tr>
+        `;
+      });
+
+      htmlContent += `
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      if (Platform.OS === 'web') {
+        await Print.printAsync({ html: htmlContent });
+      } else {
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(uri);
+        } else {
+          alert('Sharing is not available on this device');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF');
+    }
+  };
+
   const onConfirmDate = (params) => {
     setDatePickerOpen(false);
     setDateFilter(formatDate(params.date));
@@ -215,17 +299,20 @@ export default function ShopsScreen({ navigation }) {
       </Animatable.View>
 
       <Animatable.View animation="fadeIn" delay={300} style={styles.summaryContainer}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text variant="bodyLarge" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
             {selectedVehicleObj ? `Salesman: ${selectedVehicleObj.salesman}` : 'All Salesmen'}
           </Text>
           <Text variant="bodySmall" style={{ color: 'gray' }}>Showing {filteredShops.length} shops</Text>
         </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text variant="bodySmall" style={{ fontWeight: 'bold', color: 'gray', textTransform: 'uppercase' }}>Total Balance</Text>
-          <Text variant="titleLarge" style={{ fontWeight: '900', color: totalFilteredBalance > 0 ? theme.colors.error : '#4CAF50' }}>
-            ₹{totalFilteredBalance}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <IconButton icon="file-pdf-box" iconColor={theme.colors.primary} size={28} onPress={downloadPDF} style={{ marginRight: 8 }} />
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text variant="bodySmall" style={{ fontWeight: 'bold', color: 'gray', textTransform: 'uppercase' }}>Total Balance</Text>
+            <Text variant="titleLarge" style={{ fontWeight: '900', color: totalFilteredBalance > 0 ? theme.colors.error : '#4CAF50' }}>
+              ₹{totalFilteredBalance}
+            </Text>
+          </View>
         </View>
       </Animatable.View>
 
