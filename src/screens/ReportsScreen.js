@@ -30,33 +30,33 @@ export default function ReportsScreen() {
       msg += `🚚 *Vehicle Name:* ${salesman.name}\n`;
       msg += `👤 *Salesman Name:* ${salesman.salesman}\n`;
       msg += `📞 *Number:* ${salesman.salesmanMobile || 'N/A'}\n`;
-      msg += `💰 *Total Debt:* ₹${salesman.totalDebt}\n\n`;
-      msg += "```\n";
+      msg += `💰 *Total Debt:* Rs.${salesman.totalDebt}\n\n`;
+      msg += `*Pending Collections:*\n`;
     } else {
       msg = `Hello ${salesman.salesman},\n\n`;
       msg += `🚚 Vehicle Name: ${salesman.name}\n`;
       msg += `👤 Salesman Name: ${salesman.salesman}\n`;
       msg += `📞 Number: ${salesman.salesmanMobile || 'N/A'}\n`;
-      msg += `💰 Total Debt: ₹${salesman.totalDebt}\n\n`;
+      msg += `💰 Total Debt: Rs.${salesman.totalDebt}\n\n`;
+      msg += `Pending Collections:\n`;
     }
-    
-    msg += "Shop Name  | Place    | Debt\n";
-    msg += "---------------------------------\n";
     
     salesman.assignedShops.forEach((shop) => {
       if(shop.currentBalance > 0) {
-        const name = (shop.name || '').substring(0, 10).padEnd(10, ' ');
-        const place = (shop.place || '').substring(0, 8).padEnd(8, ' ');
-        const debt = `Rs.${shop.currentBalance}`;
-        msg += `${name} | ${place} | ${debt}\n`;
+        if (isWhatsApp) {
+          msg += `• *${shop.name}* (${shop.place}): Rs.${shop.currentBalance}\n`;
+        } else {
+          msg += `• ${shop.name} (${shop.place}): Rs.${shop.currentBalance}\n`;
+        }
       }
     });
     
-    msg += "---------------------------------\n";
-    const totalDebtStr = `Rs.${salesman.totalDebt}`;
-    msg += `TOTAL DEBT`.padEnd(24, ' ') + `${totalDebtStr}\n`;
+    if (isWhatsApp) {
+      msg += `\n*TOTAL DEBT:* Rs.${salesman.totalDebt}\n`;
+    } else {
+      msg += `\nTOTAL DEBT: Rs.${salesman.totalDebt}\n`;
+    }
     
-    if (isWhatsApp) msg += "```\n";
     msg += `\nPlease collect at the earliest.\n\nThank you!`;
     return encodeURIComponent(msg);
   };
@@ -75,7 +75,7 @@ export default function ReportsScreen() {
   };
 
   const generateAdminMessage = (isWhatsApp = false) => {
-    let msg = `*Admin Master Report*\nTotal Outstanding: ₹${grandTotalDebt}\n\n`;
+    let msg = isWhatsApp ? `*Admin Master Report*\nTotal Outstanding: Rs.${grandTotalDebt}\n\n` : `Admin Master Report\nTotal Outstanding: Rs.${grandTotalDebt}\n\n`;
     
     salesmanData.forEach(salesman => {
       if (salesman.totalDebt > 0) {
@@ -83,33 +83,33 @@ export default function ReportsScreen() {
           msg += `🚚 *Vehicle Name:* ${salesman.name}\n`;
           msg += `👤 *Salesman Name:* ${salesman.salesman}\n`;
           msg += `📞 *Number:* ${salesman.salesmanMobile || 'N/A'}\n`;
-          msg += `💰 *Total Debt:* ₹${salesman.totalDebt}\n`;
+          msg += `💰 *Total Debt:* Rs.${salesman.totalDebt}\n\n`;
         } else {
           msg += `🚚 Vehicle Name: ${salesman.name}\n`;
           msg += `👤 Salesman Name: ${salesman.salesman}\n`;
           msg += `📞 Number: ${salesman.salesmanMobile || 'N/A'}\n`;
-          msg += `💰 Total Debt: ₹${salesman.totalDebt}\n`;
+          msg += `💰 Total Debt: Rs.${salesman.totalDebt}\n\n`;
         }
         
-        if (isWhatsApp) msg += "```\n";
-        msg += "Shop Name  | Place    | Debt\n";
-        msg += "---------------------------------\n";
         salesman.assignedShops.forEach(shop => {
           if(shop.currentBalance > 0) {
-            const name = (shop.name || '').substring(0, 10).padEnd(10, ' ');
-            const place = (shop.place || '').substring(0, 8).padEnd(8, ' ');
-            msg += `${name} | ${place} | Rs.${shop.currentBalance}\n`;
+            if (isWhatsApp) {
+              msg += `• *${shop.name}* (${shop.place}): Rs.${shop.currentBalance}\n`;
+            } else {
+              msg += `• ${shop.name} (${shop.place}): Rs.${shop.currentBalance}\n`;
+            }
           }
         });
-        msg += "---------------------------------\n";
-        const totalDebtStr = `Rs.${salesman.totalDebt}`;
-        msg += `TOTAL DEBT`.padEnd(24, ' ') + `${totalDebtStr}\n`;
-        if (isWhatsApp) msg += "```\n";
-        msg += "\n";
+        
+        if (isWhatsApp) {
+          msg += `\n*TOTAL DEBT:* Rs.${salesman.totalDebt}\n\n`;
+        } else {
+          msg += `\nTOTAL DEBT: Rs.${salesman.totalDebt}\n\n`;
+        }
       }
     });
     
-    msg += `\nThank you!`;
+    msg += `Thank you!`;
     return encodeURIComponent(msg);
   };
 
