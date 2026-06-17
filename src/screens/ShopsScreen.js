@@ -125,44 +125,56 @@ export default function ShopsScreen({ navigation }) {
     const assignedVehicle = vehicles.find(v => v.id === item.vehicleId);
     
     return (
-      <DataTable.Row style={styles.gridRow} onPress={() => navigation.navigate('ShopDetails', { shopId: item.id })}>
-        <DataTable.Cell style={[styles.gridCell, { flex: 2 }]}>
-          <View>
-            <Text style={{ fontWeight: 'bold', color: theme.colors.primary }}>{item.name}</Text>
-            <Text variant="bodySmall" style={{ color: 'gray' }}>{item.place || item.area}</Text>
-          </View>
-        </DataTable.Cell>
-        <DataTable.Cell style={[styles.gridCell, { flex: 2 }]}>
-          <View>
-            <Text style={{ color: '#333', fontWeight: 'bold' }}>{assignedVehicle?.name || 'Unknown'}</Text>
-            <Text variant="bodySmall" style={{ color: 'gray' }}>{assignedVehicle?.salesman || 'No Salesman'}</Text>
-          </View>
-        </DataTable.Cell>
-        <DataTable.Cell style={[styles.gridCell, { flex: 1.5 }]}>{item.orderDate || item.lastTransactionDate}</DataTable.Cell>
-        <DataTable.Cell style={[styles.gridCell, { flex: 1.5 }]}>{item.lastTransactionDate}</DataTable.Cell>
-        <DataTable.Cell numeric style={[styles.gridCell, { flex: 1.5 }]}>
-          <Text style={{ fontWeight: '900', color: item.currentBalance > 0 ? theme.colors.error : '#4CAF50' }}>
-            ₹{item.currentBalance}
-          </Text>
-        </DataTable.Cell>
-        <DataTable.Cell style={[styles.gridCell, { flex: 1.5, justifyContent: 'center', borderRightWidth: 0 }]}>
-          <View style={{ alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row' }}>
-              {item.currentBalance > 0 && (
-                <IconButton icon="cash-plus" size={20} iconColor="#4CAF50" style={{ margin: 0 }} onPress={() => showPaymentDialog(item)} />
-              )}
-              <IconButton icon="trash-can-outline" size={20} iconColor={theme.colors.error} style={{ margin: 0 }} onPress={() => initiateDelete(item.id)} />
+      <Card style={styles.mobileCard} elevation={1} onPress={() => navigation.navigate('ShopDetails', { shopId: item.id })}>
+        <Card.Content style={{ padding: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: 'bold', fontSize: 16, color: theme.colors.primary }}>{item.name}</Text>
+              <Text variant="bodySmall" style={{ color: 'gray', marginBottom: 4 }}>{item.place || item.area}</Text>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <Avatar.Icon size={20} icon="account-tie" style={{ backgroundColor: '#E3F2FD', marginRight: 4 }} color="#1976D2" />
+                <Text variant="bodySmall" style={{ color: '#333' }}>{assignedVehicle?.salesman || 'No Salesman'} ({assignedVehicle?.name || 'Unknown'})</Text>
+              </View>
+              
+              <View style={{ flexDirection: 'row', marginTop: 12 }}>
+                <View style={{ marginRight: 24 }}>
+                  <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase' }}>Debt Given</Text>
+                  <Text variant="bodySmall" style={{ fontWeight: 'bold', marginTop: 2 }}>{item.orderDate || item.lastTransactionDate || 'N/A'}</Text>
+                </View>
+                <View>
+                  <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase' }}>Due Date</Text>
+                  <Text variant="bodySmall" style={{ fontWeight: 'bold', marginTop: 2 }}>{item.lastTransactionDate || 'N/A'}</Text>
+                </View>
+              </View>
             </View>
-            {item.paymentStatus && (
-              <View style={{ backgroundColor: item.paymentStatus === 'Paid' ? '#E8F5E9' : '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4 }}>
-                <Text variant="labelSmall" style={{ color: item.paymentStatus === 'Paid' ? '#2E7D32' : '#E65100', fontSize: 10, fontWeight: 'bold' }}>
-                  {item.paymentStatus}
+            
+            <View style={{ alignItems: 'flex-end', paddingLeft: 8 }}>
+              <View style={{ alignItems: 'flex-end', marginBottom: 8 }}>
+                <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase', marginBottom: 2 }}>Balance</Text>
+                <Text style={{ fontWeight: '900', fontSize: 18, color: item.currentBalance > 0 ? theme.colors.error : '#4CAF50' }}>
+                  ₹{item.currentBalance}
                 </Text>
               </View>
-            )}
+              
+              {item.paymentStatus && (
+                <View style={{ backgroundColor: item.paymentStatus === 'Paid' ? '#E8F5E9' : '#FFF3E0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: 8 }}>
+                  <Text variant="labelSmall" style={{ color: item.paymentStatus === 'Paid' ? '#2E7D32' : '#E65100', fontSize: 10, fontWeight: 'bold' }}>
+                    {item.paymentStatus}
+                  </Text>
+                </View>
+              )}
+              
+              <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                {item.currentBalance > 0 && (
+                  <IconButton icon="cash-plus" size={20} iconColor="#4CAF50" containerColor="#E8F5E9" style={{ margin: 0, marginRight: 8 }} onPress={() => showPaymentDialog(item)} />
+                )}
+                <IconButton icon="trash-can-outline" size={20} iconColor={theme.colors.error} containerColor="#FFEBEE" style={{ margin: 0 }} onPress={() => initiateDelete(item.id)} />
+              </View>
+            </View>
           </View>
-        </DataTable.Cell>
-      </DataTable.Row>
+        </Card.Content>
+      </Card>
     );
   };
 
@@ -217,16 +229,7 @@ export default function ShopsScreen({ navigation }) {
         </View>
       </Animatable.View>
 
-      <DataTable style={{ flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 8, overflow: 'hidden', marginHorizontal: 16 }}>
-        <DataTable.Header style={{ backgroundColor: '#f8fafc', borderBottomWidth: 2, borderBottomColor: '#cbd5e1' }}>
-          <DataTable.Title style={[styles.gridCell, { flex: 2 }]}><Text style={{fontWeight: 'bold', color: '#334155'}}>Shop Details</Text></DataTable.Title>
-          <DataTable.Title style={[styles.gridCell, { flex: 2 }]}><Text style={{fontWeight: 'bold', color: '#334155'}}>Salesman</Text></DataTable.Title>
-          <DataTable.Title style={[styles.gridCell, { flex: 1.5 }]}><Text style={{fontWeight: 'bold', color: '#334155'}}>Debt Given</Text></DataTable.Title>
-          <DataTable.Title style={[styles.gridCell, { flex: 1.5 }]}><Text style={{fontWeight: 'bold', color: '#334155'}}>Due Date</Text></DataTable.Title>
-          <DataTable.Title numeric style={[styles.gridCell, { flex: 1.5 }]}><Text style={{fontWeight: 'bold', color: '#334155'}}>Balance</Text></DataTable.Title>
-          <DataTable.Title style={[styles.gridCell, { flex: 1.5, justifyContent: 'center', borderRightWidth: 0 }]}><Text style={{fontWeight: 'bold', color: '#334155'}}>Actions</Text></DataTable.Title>
-        </DataTable.Header>
-
+      <View style={{ flex: 1, marginHorizontal: 16, marginTop: 8 }}>
         <FlatList
           data={filteredShops}
           keyExtractor={(item) => item.id}
@@ -236,7 +239,7 @@ export default function ShopsScreen({ navigation }) {
           ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 40, color: 'gray' }}>No shops found matching the criteria.</Text>}
           showsVerticalScrollIndicator={false}
         />
-      </DataTable>
+      </View>
 
 
       <Portal>
@@ -350,5 +353,6 @@ const styles = StyleSheet.create({
   summaryContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', elevation: 1 },
   fabContainer: { position: 'absolute', margin: 16, right: 0, bottom: 0 },
   fab: { backgroundColor: '#C9002B', borderRadius: 16, elevation: 6 },
-  input: { marginBottom: 12, backgroundColor: '#FAFAFA' }
+  input: { marginBottom: 12, backgroundColor: '#FAFAFA' },
+  mobileCard: { marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#F1F5F9' }
 });
