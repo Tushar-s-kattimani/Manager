@@ -229,16 +229,25 @@ export default function ReportsScreen() {
       `;
 
       if (Platform.OS === 'web') {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        iframe.contentDocument.write(htmlContent);
-        iframe.contentDocument.close();
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
+        const generatePdf = () => {
+          const opt = {
+            margin:       10,
+            filename:     'Admin_Master_Report.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+          window.html2pdf().set(opt).from(htmlContent).save();
+        };
+
+        if (!window.html2pdf) {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+          script.onload = generatePdf;
+          document.body.appendChild(script);
+        } else {
+          generatePdf();
+        }
       } else {
         const { uri } = await Print.printToFileAsync({ html: htmlContent });
         const isAvailable = await Sharing.isAvailableAsync();
