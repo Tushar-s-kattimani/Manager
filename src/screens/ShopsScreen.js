@@ -97,7 +97,7 @@ export default function ShopsScreen({ navigation }) {
     if (selectedVehicleFilter && s.vehicleId !== selectedVehicleFilter) return false;
     if (paymentFilter === 'paid' && s.currentBalance > 0) return false;
     if (paymentFilter === 'notPaid' && s.currentBalance <= 0) return false;
-    if (dateFilter && s.lastTransactionDate !== dateFilter) return false;
+    if (dateFilter && s.lastTransactionDate !== dateFilter && s.orderDate !== dateFilter && s.lastPaymentDate !== dateFilter) return false;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchName = s.name?.toLowerCase().includes(query);
@@ -478,7 +478,7 @@ export default function ShopsScreen({ navigation }) {
         mode="single"
         visible={datePickerOpen}
         onDismiss={() => setDatePickerOpen(false)}
-        date={undefined}
+        date={dateFilter ? new Date(dateFilter.split('-').reverse().join('-')) : new Date()}
         onConfirm={onConfirmDate}
       />
 
