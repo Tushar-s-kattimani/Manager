@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Linking, Platform } from 'react-native';
-import { Text, useTheme, Card, List, Avatar, IconButton } from 'react-native-paper';
+import { Text, useTheme, Card, List, Avatar, IconButton, Chip } from 'react-native-paper';
+import { DatePickerModal } from 'react-native-paper-dates';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { useAppContext } from '../context/AppContext';
@@ -11,12 +12,33 @@ export default function ReportsScreen() {
   const theme = useTheme();
   const { shops, vehicles } = useAppContext();
 
+  const [dateFilter, setDateFilter] = useState(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  const formatDate = (dateObj) => {
+    if (!dateObj) return null;
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const y = dateObj.getFullYear();
+    return `${d}-${m}-${y}`;
+  };
+
+  const onConfirmDate = (params) => {
+    setDatePickerOpen(false);
+    setDateFilter(formatDate(params.date));
+  };
+
+  // Apply date filter
+  const filteredShops = dateFilter 
+    ? shops.filter(s => s.lastTransactionDate === dateFilter || s.orderDate === dateFilter || s.lastPaymentDate === dateFilter)
+    : shops;
+
   // Calculate Grand Total
-  const grandTotalDebt = shops.reduce((sum, shop) => sum + shop.currentBalance, 0);
+  const grandTotalDebt = filteredShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
 
   // Group shops by Salesman (Vehicle)
   const salesmanData = vehicles.map(vehicle => {
-    const assignedShops = shops.filter(s => s.vehicleId === vehicle.id);
+    const assignedShops = filteredShops.filter(s => s.vehicleId === vehicle.id);
     const totalDebt = assignedShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
     return {
       ...vehicle,
@@ -248,6 +270,22 @@ export default function ReportsScreen() {
         </Animatable.View>
       </LinearGradient>
 
+      <View style={styles.filtersSection}>
+        <Text style={styles.filterLabel}>Filters</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+          <Chip 
+            icon="calendar" 
+            selected={!!dateFilter} 
+            onPress={() => setDatePickerOpen(true)} 
+            onClose={dateFilter ? () => setDateFilter(null) : undefined}
+            style={styles.chip} 
+            showSelectedOverlay
+          >
+            {dateFilter ? `Date: ${dateFilter}` : 'Select Date Filter'}
+          </Chip>
+        </ScrollView>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animatable.View animation="fadeInUp" delay={200}>
           <Text variant="titleMedium" style={styles.sectionTitle}>Debt by Salesman</Text>
@@ -293,14 +331,27 @@ export default function ReportsScreen() {
           </View>
         </Animatable.View>
       </ScrollView>
+
+      <DatePickerModal
+        locale="en-GB"
+        mode="single"
+        visible={datePickerOpen}
+        onDismiss={() => setDatePickerOpen(false)}
+        date={dateFilter ? new Date(dateFilter.split('-').reverse().join('-')) : new Date()}
+        onConfirm={onConfirmDate}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerGradient: { padding: 16, paddingTop: 20, paddingBottom: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, marginBottom: 12 },
+  headerGradient: { padding: 16, paddingTop: 20, paddingBottom: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, marginBottom: 0 },
   headerContent: {},
+  filtersSection: { paddingBottom: 12, paddingTop: 16, backgroundColor: '#fff', elevation: 2, marginBottom: 12 },
+  filterLabel: { marginLeft: 16, marginBottom: 8, color: 'gray', fontWeight: 'bold', textTransform: 'uppercase', fontSize: 10 },
+  chipScroll: { paddingHorizontal: 16 },
+  chip: { marginRight: 8, borderRadius: 20 },
   scrollContent: { padding: 16, paddingBottom: 60 },
   sectionTitle: { fontWeight: 'bold', color: '#333', marginBottom: 16, marginLeft: 4 },
   salesmanCard: { marginBottom: 16, borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden' },
