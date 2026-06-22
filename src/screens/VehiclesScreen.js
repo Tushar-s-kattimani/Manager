@@ -95,14 +95,17 @@ export default function VehiclesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <LinearGradient colors={[theme.colors.primary, '#001D36']} style={styles.headerGradient}>
-        <Animatable.View animation="fadeIn" style={styles.headerContent}>
-          <Text variant="headlineMedium" style={{ color: '#fff', fontWeight: 'bold' }}>Manage Vehicles</Text>
-          <Text variant="bodyMedium" style={{ color: 'rgba(255,255,255,0.8)' }}>{vehicles.length} vehicles assigned to routes</Text>
-        </Animatable.View>
-      </LinearGradient>
-
       <FlatList
+        ListHeaderComponent={
+          <View>
+            <LinearGradient colors={[theme.colors.primary, '#001D36']} style={styles.headerGradient}>
+              <Animatable.View animation="fadeIn" style={styles.headerContent}>
+                <Text variant="headlineMedium" style={{ color: '#fff', fontWeight: 'bold' }}>Manage Vehicles</Text>
+                <Text variant="bodyMedium" style={{ color: 'rgba(255,255,255,0.8)' }}>{vehicles.length} vehicles assigned to routes</Text>
+              </Animatable.View>
+            </LinearGradient>
+          </View>
+        }
         data={vehicles}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -179,8 +182,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerGradient: { padding: 24, paddingTop: 50, paddingBottom: 30, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, marginBottom: 16 },
   headerContent: { alignItems: 'flex-start' },
-  listContainer: { padding: 16, paddingBottom: 100 },
-  card: { marginBottom: 16, backgroundColor: '#ffffff', borderRadius: 16 },
+  listContainer: { paddingBottom: 100 },
+  card: { marginHorizontal: 16, marginBottom: 16, backgroundColor: '#ffffff', borderRadius: 16 },
   iconGradient: { borderRadius: 12, padding: 4, elevation: 3 },
   fabContainer: { position: 'absolute', margin: 16, right: 0, bottom: 0 },
   fab: { backgroundColor: '#C9002B', borderRadius: 16, elevation: 6 },

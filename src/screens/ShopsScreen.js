@@ -413,66 +413,70 @@ export default function ShopsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Animatable.View animation="fadeInDown" delay={100} style={styles.filtersSection}>
-        <Searchbar
-          placeholder="Search shops, owners, areas..."
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={{ marginHorizontal: 16, marginBottom: 12, elevation: 0, backgroundColor: '#F1F5F9', borderRadius: 12, height: 44 }}
-          inputStyle={{ minHeight: 44, paddingBottom: 0 }}
-        />
-        <Text variant="labelSmall" style={styles.filterLabel}>Payment Status:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-          <Chip selected={paymentFilter === 'all'} onPress={() => setPaymentFilter('all')} style={styles.chip} showSelectedOverlay>All</Chip>
-          <Chip selected={paymentFilter === 'paid'} onPress={() => setPaymentFilter('paid')} style={styles.chip} showSelectedOverlay>Paid</Chip>
-          <Chip selected={paymentFilter === 'notPaid'} onPress={() => setPaymentFilter('notPaid')} style={styles.chip} showSelectedOverlay>Not Paid</Chip>
-        </ScrollView>
-
-        <Text variant="labelSmall" style={styles.filterLabel}>Filters:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-          <Chip 
-            icon="calendar" 
-            selected={!!dateFilter} 
-            onPress={() => setDatePickerOpen(true)} 
-            onClose={dateFilter ? () => setDateFilter(null) : undefined}
-            style={styles.chip} 
-            showSelectedOverlay
-          >
-            {dateFilter ? `Date: ${dateFilter}` : 'Select Date'}
-          </Chip>
-          <Chip selected={selectedVehicleFilter === null} onPress={() => setSelectedVehicleFilter(null)} style={styles.chip} showSelectedOverlay>All Salesmen</Chip>
-          {vehicles.map(v => (
-            <Chip key={v.id} selected={selectedVehicleFilter === v.id} onPress={() => setSelectedVehicleFilter(v.id)} style={styles.chip} showSelectedOverlay>{v.salesman || v.name}</Chip>
-          ))}
-        </ScrollView>
-      </Animatable.View>
-
-      <Animatable.View animation="fadeIn" delay={300} style={styles.summaryContainer}>
-        <View style={{ flex: 1 }}>
-          <Text variant="bodyLarge" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
-            {selectedVehicleObj ? `Salesman: ${selectedVehicleObj.salesman}` : 'All Salesmen'}
-          </Text>
-          <Text variant="bodySmall" style={{ color: 'gray' }}>Showing {filteredShops.length} shops</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <IconButton icon="file-pdf-box" iconColor={theme.colors.primary} size={28} onPress={downloadPDF} style={{ marginRight: 8 }} />
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text variant="bodySmall" style={{ fontWeight: 'bold', color: 'gray', textTransform: 'uppercase' }}>Total Balance</Text>
-            <Text variant="titleLarge" style={{ fontWeight: '900', color: totalFilteredBalance > 0 ? theme.colors.error : '#4CAF50' }}>
-              ₹{totalFilteredBalance}
-            </Text>
-          </View>
-        </View>
-      </Animatable.View>
-
-      <View style={{ flex: 1, marginHorizontal: 16, marginTop: 8 }}>
+      <View style={{ flex: 1 }}>
         <FlatList
           data={filteredShops}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={
+            <View>
+              <Animatable.View animation="fadeInDown" delay={100} style={styles.filtersSection}>
+                <Searchbar
+                  placeholder="Search shops, owners, areas..."
+                  onChangeText={setSearchQuery}
+                  value={searchQuery}
+                  style={{ marginHorizontal: 16, marginBottom: 12, elevation: 0, backgroundColor: '#F1F5F9', borderRadius: 12, height: 44 }}
+                  inputStyle={{ minHeight: 44, paddingBottom: 0 }}
+                />
+                <Text variant="labelSmall" style={styles.filterLabel}>Payment Status:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                  <Chip selected={paymentFilter === 'all'} onPress={() => setPaymentFilter('all')} style={styles.chip} showSelectedOverlay>All</Chip>
+                  <Chip selected={paymentFilter === 'paid'} onPress={() => setPaymentFilter('paid')} style={styles.chip} showSelectedOverlay>Paid</Chip>
+                  <Chip selected={paymentFilter === 'notPaid'} onPress={() => setPaymentFilter('notPaid')} style={styles.chip} showSelectedOverlay>Not Paid</Chip>
+                </ScrollView>
+
+                <Text variant="labelSmall" style={styles.filterLabel}>Filters:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                  <Chip 
+                    icon="calendar" 
+                    selected={!!dateFilter} 
+                    onPress={() => setDatePickerOpen(true)} 
+                    onClose={dateFilter ? () => setDateFilter(null) : undefined}
+                    style={styles.chip} 
+                    showSelectedOverlay
+                  >
+                    {dateFilter ? `Date: ${dateFilter}` : 'Select Date'}
+                  </Chip>
+                  <Chip selected={selectedVehicleFilter === null} onPress={() => setSelectedVehicleFilter(null)} style={styles.chip} showSelectedOverlay>All Salesmen</Chip>
+                  {vehicles.map(v => (
+                    <Chip key={v.id} selected={selectedVehicleFilter === v.id} onPress={() => setSelectedVehicleFilter(v.id)} style={styles.chip} showSelectedOverlay>{v.salesman || v.name}</Chip>
+                  ))}
+                </ScrollView>
+              </Animatable.View>
+
+              <Animatable.View animation="fadeIn" delay={300} style={styles.summaryContainer}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyLarge" style={{ fontWeight: 'bold', color: theme.colors.primary }}>
+                    {selectedVehicleObj ? `Salesman: ${selectedVehicleObj.salesman}` : 'All Salesmen'}
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: 'gray' }}>Showing {filteredShops.length} shops</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <IconButton icon="file-pdf-box" iconColor={theme.colors.primary} size={28} onPress={downloadPDF} style={{ marginRight: 8 }} />
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text variant="bodySmall" style={{ fontWeight: 'bold', color: 'gray', textTransform: 'uppercase' }}>Total Balance</Text>
+                    <Text variant="titleLarge" style={{ fontWeight: '900', color: totalFilteredBalance > 0 ? theme.colors.error : '#4CAF50' }}>
+                      ₹{totalFilteredBalance}
+                    </Text>
+                  </View>
+                </View>
+              </Animatable.View>
+              <View style={{ height: 8 }} />
+            </View>
+          }
           renderItem={renderItem}
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 100 }}
-          ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 40, color: 'gray' }}>No shops found matching the criteria.</Text>}
+          ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 40, color: 'gray', marginHorizontal: 16 }}>No shops found matching the criteria.</Text>}
           showsVerticalScrollIndicator={false}
         />
       </View>
@@ -611,5 +615,5 @@ const styles = StyleSheet.create({
   fabContainer: { position: 'absolute', margin: 16, right: 0, bottom: 0 },
   fab: { backgroundColor: '#C9002B', borderRadius: 16, elevation: 6 },
   input: { marginBottom: 12, backgroundColor: '#FAFAFA' },
-  mobileCard: { marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#F1F5F9' }
+  mobileCard: { marginHorizontal: 16, marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#F1F5F9' }
 });

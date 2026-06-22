@@ -73,54 +73,58 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <LinearGradient colors={[theme.colors.primary, '#001D36']} style={styles.headerGradient}>
-        <Animatable.View animation="fadeInDown" style={styles.headerContent}>
-          <Text variant="headlineMedium" style={{ color: '#fff', fontWeight: 'bold' }}>Collection History</Text>
-          <Text variant="bodyMedium" style={{ color: 'rgba(255,255,255,0.8)' }}>Track payments by date and salesman</Text>
-        </Animatable.View>
-      </LinearGradient>
-
-      <View style={styles.filtersSection}>
-        <Text style={styles.filterLabel}>Filters</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-          <Chip 
-            icon="calendar" 
-            selected={!!dateFilter} 
-            onPress={() => setDatePickerOpen(true)} 
-            onClose={dateFilter ? () => setDateFilter(null) : undefined}
-            style={styles.chip} 
-            showSelectedOverlay
-          >
-            {dateFilter ? `Date: ${dateFilter}` : 'Select Date'}
-          </Chip>
-          <Chip 
-            selected={selectedVehicle === null} 
-            onPress={() => setSelectedVehicle(null)} 
-            style={styles.chip}
-            showSelectedOverlay
-          >
-            All Salesmen
-          </Chip>
-          {vehicles.map(v => (
-            <Chip 
-              key={v.id} 
-              selected={selectedVehicle === v.id} 
-              onPress={() => setSelectedVehicle(v.id)} 
-              style={styles.chip}
-              showSelectedOverlay
-            >
-              {v.salesman || v.name}
-            </Chip>
-          ))}
-        </ScrollView>
-      </View>
-
       <FlatList
+        ListHeaderComponent={
+          <View>
+            <LinearGradient colors={[theme.colors.primary, '#001D36']} style={styles.headerGradient}>
+              <Animatable.View animation="fadeInDown" style={styles.headerContent}>
+                <Text variant="headlineMedium" style={{ color: '#fff', fontWeight: 'bold' }}>Collection History</Text>
+                <Text variant="bodyMedium" style={{ color: 'rgba(255,255,255,0.8)' }}>Track payments by date and salesman</Text>
+              </Animatable.View>
+            </LinearGradient>
+
+            <View style={styles.filtersSection}>
+              <Text style={styles.filterLabel}>Filters</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                <Chip 
+                  icon="calendar" 
+                  selected={!!dateFilter} 
+                  onPress={() => setDatePickerOpen(true)} 
+                  onClose={dateFilter ? () => setDateFilter(null) : undefined}
+                  style={styles.chip} 
+                  showSelectedOverlay
+                >
+                  {dateFilter ? `Date: ${dateFilter}` : 'Select Date'}
+                </Chip>
+                <Chip 
+                  selected={selectedVehicle === null} 
+                  onPress={() => setSelectedVehicle(null)} 
+                  style={styles.chip}
+                  showSelectedOverlay
+                >
+                  All Salesmen
+                </Chip>
+                {vehicles.map(v => (
+                  <Chip 
+                    key={v.id} 
+                    selected={selectedVehicle === v.id} 
+                    onPress={() => setSelectedVehicle(v.id)} 
+                    style={styles.chip}
+                    showSelectedOverlay
+                  >
+                    {v.salesman || v.name}
+                  </Chip>
+                ))}
+              </ScrollView>
+            </View>
+            <View style={{ height: 16 }} />
+          </View>
+        }
         data={datesArray}
         keyExtractor={(item) => item.date}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={{ textAlign: 'center', marginTop: 40, color: 'gray' }}>No collections found.</Text>
+          <Text style={{ textAlign: 'center', marginTop: 40, color: 'gray', marginHorizontal: 16 }}>No collections found.</Text>
         }
         renderItem={({ item, index }) => (
           <Animatable.View animation="fadeInUp" delay={index * 100}>
@@ -170,7 +174,7 @@ const styles = StyleSheet.create({
   filterLabel: { marginLeft: 16, marginBottom: 8, color: 'gray', fontWeight: 'bold', textTransform: 'uppercase', fontSize: 10 },
   chipScroll: { paddingHorizontal: 16 },
   chip: { marginRight: 8, borderRadius: 20 },
-  listContent: { padding: 16, paddingBottom: 100 },
-  dateCard: { marginBottom: 16, borderRadius: 16, backgroundColor: '#fff', overflow: 'hidden' },
+  listContent: { paddingBottom: 100 },
+  dateCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: 16, backgroundColor: '#fff', overflow: 'hidden' },
   paymentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }
 });

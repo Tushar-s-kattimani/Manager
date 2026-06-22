@@ -265,37 +265,36 @@ export default function ReportsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <LinearGradient colors={[theme.colors.primary, '#001D36']} style={styles.headerGradient}>
-        <Animatable.View animation="fadeIn" style={[styles.headerContent, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-          <View>
-            <Text variant="labelMedium" style={{ color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 1 }}>Total Outstanding</Text>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', marginTop: 2 }}>₹{grandTotalDebt}</Text>
-          </View>
-          <View style={{ flexDirection: 'row' }}>
-            <IconButton icon="file-pdf-box" iconColor="#fff" containerColor="#D32F2F" size={20} onPress={downloadPDF} style={{ margin: 0, marginRight: 8 }} />
-            <IconButton icon="whatsapp" iconColor="#fff" containerColor="#25D366" size={20} onPress={sendAdminWhatsApp} style={{ margin: 0, marginRight: 8 }} />
-            <IconButton icon="message-text" iconColor="#fff" containerColor="#007AFF" size={20} onPress={sendAdminSMS} style={{ margin: 0 }} />
-          </View>
-        </Animatable.View>
-      </LinearGradient>
-
-      <View style={styles.filtersSection}>
-        <Text style={styles.filterLabel}>Filters</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-          <Chip 
-            icon="calendar" 
-            selected={!!dateFilter} 
-            onPress={() => setDatePickerOpen(true)} 
-            onClose={dateFilter ? () => setDateFilter(null) : undefined}
-            style={styles.chip} 
-            showSelectedOverlay
-          >
-            {dateFilter ? `Date: ${dateFilter}` : 'Select Date Filter'}
-          </Chip>
-        </ScrollView>
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={[theme.colors.primary, '#001D36']} style={styles.headerGradient}>
+          <Animatable.View animation="fadeIn" style={[styles.headerContent, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+            <View>
+              <Text variant="labelMedium" style={{ color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 1 }}>Total Outstanding</Text>
+              <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', marginTop: 2 }}>₹{grandTotalDebt}</Text>
+            </View>
+            <View style={{ flexDirection: 'row' }}>
+              <IconButton icon="file-pdf-box" iconColor="#fff" containerColor="#D32F2F" size={20} onPress={downloadPDF} style={{ margin: 0, marginRight: 8 }} />
+              <IconButton icon="whatsapp" iconColor="#fff" containerColor="#25D366" size={20} onPress={sendAdminWhatsApp} style={{ margin: 0, marginRight: 8 }} />
+              <IconButton icon="message-text" iconColor="#fff" containerColor="#007AFF" size={20} onPress={sendAdminSMS} style={{ margin: 0 }} />
+            </View>
+          </Animatable.View>
+        </LinearGradient>
+
+        <View style={styles.filtersSection}>
+          <Text style={styles.filterLabel}>Filters</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+            <Chip 
+              icon="calendar" 
+              selected={!!dateFilter} 
+              onPress={() => setDatePickerOpen(true)} 
+              onClose={dateFilter ? () => setDateFilter(null) : undefined}
+              style={styles.chip} 
+              showSelectedOverlay
+            >
+              {dateFilter ? `Date: ${dateFilter}` : 'Select Date Filter'}
+            </Chip>
+          </ScrollView>
+        </View>
         <Animatable.View animation="fadeInUp" delay={200}>
           <Text variant="titleMedium" style={styles.sectionTitle}>Debt by Salesman</Text>
           
@@ -361,8 +360,8 @@ const styles = StyleSheet.create({
   filterLabel: { marginLeft: 16, marginBottom: 8, color: 'gray', fontWeight: 'bold', textTransform: 'uppercase', fontSize: 10 },
   chipScroll: { paddingHorizontal: 16 },
   chip: { marginRight: 8, borderRadius: 20 },
-  scrollContent: { padding: 16, paddingBottom: 60 },
-  sectionTitle: { fontWeight: 'bold', color: '#333', marginBottom: 16, marginLeft: 4 },
-  salesmanCard: { marginBottom: 16, borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden' },
+  scrollContent: { paddingBottom: 60 },
+  sectionTitle: { fontWeight: 'bold', color: '#333', marginBottom: 16, marginLeft: 20 },
+  salesmanCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden' },
   shopItem: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', backgroundColor: '#FAFAFA' }
 });
