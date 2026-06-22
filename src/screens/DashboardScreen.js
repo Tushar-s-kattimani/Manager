@@ -7,7 +7,7 @@ import { useAppContext } from '../context/AppContext';
 
 export default function DashboardScreen({ setIsAuthenticated }) {
   const theme = useTheme();
-  const { shops, vehicles } = useAppContext();
+  const { shops, vehicles, transactions } = useAppContext();
 
   const salesmanData = vehicles.map(vehicle => {
     const assignedShops = shops.filter(s => s.vehicleId === vehicle.id);
@@ -26,54 +26,32 @@ export default function DashboardScreen({ setIsAuthenticated }) {
     return `${day}-${month}-${year}`;
   };
 
-  const getTomorrowDate = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
-
   const todayDate = getTodayDate();
-  const tomorrowDate = getTomorrowDate();
-
-  const dueTodayData = vehicles.map(vehicle => {
-    const assignedShops = shops.filter(s => s.vehicleId === vehicle.id && s.lastTransactionDate === todayDate && s.currentBalance > 0);
-    const dueAmount = assignedShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
-    return {
-      ...vehicle,
-      assignedShops,
-      dueAmount
-    };
-  }).filter(v => v.dueAmount > 0);
-
-  const dueTomorrowData = vehicles.map(vehicle => {
-    const assignedShops = shops.filter(s => s.vehicleId === vehicle.id && s.lastTransactionDate === tomorrowDate && s.currentBalance > 0);
-    const dueAmount = assignedShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
-    return {
-      ...vehicle,
-      assignedShops,
-      dueAmount
-    };
-  }).filter(v => v.dueAmount > 0);
 
   const totalOutstanding = shops.reduce((sum, s) => sum + s.currentBalance, 0);
   const pendingShops = shops.filter(s => s.currentBalance > 0).length;
   
-  const todaysCollection = shops
-    .filter(s => s.lastPaymentDate === todayDate)
-    .reduce((sum, s) => sum + (Number(s.lastPaymentAmount) || 0), 0);
+  const todaysCollection = transactions
+    .filter(t => t.type === 'payment' && t.date === todayDate)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  const todaysCredit = shops
-    .filter(s => s.orderDate === todayDate)
-    .reduce((sum, s) => {
-      let original = Number(s.currentBalance) || 0;
-      if (s.lastPaymentDate === todayDate) {
-        original += (Number(s.lastPaymentAmount) || 0);
-      }
-      return sum + original;
-    }, 0);
+  const todaysCredit = transactions
+    .filter(t => t.type === 'debt' && t.date === todayDate)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const salesmanCollectionData = vehicles.map(vehicle => {
+    const vehicleShops = shops.filter(s => s.vehicleId === vehicle.id).map(s => s.id);
+    const todaysPayments = transactions.filter(t => 
+      t.type === 'payment' && 
+      t.date === todayDate && 
+      vehicleShops.includes(t.shopId)
+    );
+    const totalCollected = todaysPayments.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    return {
+      ...vehicle,
+      totalCollected
+    };
+  }).filter(v => v.totalCollected > 0).sort((a, b) => b.totalCollected - a.totalCollected);
 
   const stats = [
     { title: 'Total Outstanding', value: `₹${totalOutstanding}`, icon: 'currency-inr', color: theme.colors.primary },
@@ -145,30 +123,22 @@ export default function DashboardScreen({ setIsAuthenticated }) {
       </Animatable.View>
 
       <Animatable.View animation="fadeInUp" delay={700}>
-        <Card style={styles.chartCard} elevation={2}>
-          <Card.Title title="Due Today" titleStyle={{ fontWeight: 'bold', color: '#E53935' }} left={(props) => <Avatar.Icon {...props} icon="calendar-alert" color="#E53935" style={{ backgroundColor: '#FFEBEE' }}/>} />
+        <Card style={[styles.chartCard, { marginBottom: 32 }]} elevation={2}>
+          <Card.Title title="Today's Collection" titleStyle={{ fontWeight: 'bold', color: '#4CAF50' }} left={(props) => <Avatar.Icon {...props} icon="cash-multiple" color="#4CAF50" style={{ backgroundColor: '#E8F5E9' }}/>} />
           <Card.Content style={{ paddingHorizontal: 0 }}>
-            {dueTodayData.length === 0 ? (
-              <Text style={{ textAlign: 'center', color: 'gray', padding: 16 }}>No collections due today.</Text>
+            {salesmanCollectionData.length === 0 ? (
+              <Text style={{ textAlign: 'center', color: 'gray', padding: 16 }}>No collections made today.</Text>
             ) : (
-              dueTodayData.map((salesman, index) => (
-                <View key={salesman.id} style={{ borderBottomWidth: index !== dueTodayData.length - 1 ? 4 : 0, borderBottomColor: '#f1f5f9', paddingBottom: 16, marginBottom: index !== dueTodayData.length - 1 ? 16 : 0 }}>
-                  <View style={{ paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
-                    <Avatar.Icon size={32} icon="account-tie" style={{ backgroundColor: '#E3F2FD' }} color={theme.colors.primary} />
-                    <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15, marginLeft: 12 }}>{salesman.salesman || 'Unknown Salesman'}</Text>
+              salesmanCollectionData.map((salesman, index) => (
+                <View key={salesman.id} style={[styles.salesmanRow, index !== salesmanCollectionData.length - 1 && { borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }]}>
+                  <Avatar.Icon size={40} icon="account-tie" style={{ backgroundColor: '#E8F5E9' }} color="#4CAF50" />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15 }}>{salesman.salesman || 'Unknown Salesman'}</Text>
+                    <Text variant="bodySmall" style={{ color: 'gray' }}>{salesman.name}</Text>
                   </View>
-                  
-                  {salesman.assignedShops.map(shop => (
-                    <View key={shop.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 4 }}>
-                      <Text style={{ color: '#555', fontSize: 14 }}>• {shop.name}</Text>
-                      <Text style={{ color: '#555', fontSize: 14, fontWeight: 'bold' }}>₹{shop.currentBalance}</Text>
-                    </View>
-                  ))}
-                  
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, marginTop: 8, borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
-                    <Text style={{ fontWeight: 'bold', color: '#E53935', fontSize: 14 }}>Total Due Today</Text>
-                    <Text style={{ fontWeight: '900', fontSize: 16, color: '#E53935' }}>₹{salesman.dueAmount}</Text>
-                  </View>
+                  <Text style={{ fontWeight: '900', fontSize: 16, color: '#4CAF50' }}>
+                    ₹{salesman.totalCollected}
+                  </Text>
                 </View>
               ))
             )}
@@ -176,37 +146,7 @@ export default function DashboardScreen({ setIsAuthenticated }) {
         </Card>
       </Animatable.View>
 
-      <Animatable.View animation="fadeInUp" delay={800}>
-        <Card style={[styles.chartCard, { marginBottom: 32 }]} elevation={2}>
-          <Card.Title title="Due Tomorrow (1 Day Early)" titleStyle={{ fontWeight: 'bold', color: '#F57C00' }} left={(props) => <Avatar.Icon {...props} icon="calendar-clock" color="#F57C00" style={{ backgroundColor: '#FFF3E0' }}/>} />
-          <Card.Content style={{ paddingHorizontal: 0 }}>
-            {dueTomorrowData.length === 0 ? (
-              <Text style={{ textAlign: 'center', color: 'gray', padding: 16 }}>No collections due tomorrow.</Text>
-            ) : (
-              dueTomorrowData.map((salesman, index) => (
-                <View key={salesman.id} style={{ borderBottomWidth: index !== dueTomorrowData.length - 1 ? 4 : 0, borderBottomColor: '#f1f5f9', paddingBottom: 16, marginBottom: index !== dueTomorrowData.length - 1 ? 16 : 0 }}>
-                  <View style={{ paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
-                    <Avatar.Icon size={32} icon="account-tie" style={{ backgroundColor: '#E3F2FD' }} color={theme.colors.primary} />
-                    <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15, marginLeft: 12 }}>{salesman.salesman || 'Unknown Salesman'}</Text>
-                  </View>
-                  
-                  {salesman.assignedShops.map(shop => (
-                    <View key={shop.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 4 }}>
-                      <Text style={{ color: '#555', fontSize: 14 }}>• {shop.name}</Text>
-                      <Text style={{ color: '#555', fontSize: 14, fontWeight: 'bold' }}>₹{shop.currentBalance}</Text>
-                    </View>
-                  ))}
-                  
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8, marginTop: 8, borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
-                    <Text style={{ fontWeight: 'bold', color: '#F57C00', fontSize: 14 }}>Total Due Tomorrow</Text>
-                    <Text style={{ fontWeight: '900', fontSize: 16, color: '#F57C00' }}>₹{salesman.dueAmount}</Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </Card.Content>
-        </Card>
-      </Animatable.View>
+
     </ScrollView>
   );
 }

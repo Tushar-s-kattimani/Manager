@@ -107,6 +107,26 @@ export default function ShopsScreen({ navigation }) {
       if (!matchName && !matchOwner && !matchArea && !matchPlace) return false;
     }
     return true;
+  }).sort((a, b) => {
+    let dateA, dateB;
+    if (paymentFilter === 'paid') {
+      dateA = a.lastPaymentDate || a.orderDate || a.lastTransactionDate || '';
+      dateB = b.lastPaymentDate || b.orderDate || b.lastTransactionDate || '';
+    } else {
+      dateA = a.orderDate || a.lastTransactionDate || '';
+      dateB = b.orderDate || b.lastTransactionDate || '';
+    }
+
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    
+    const [dayA, monthA, yearA] = dateA.split('-');
+    const [dayB, monthB, yearB] = dateB.split('-');
+    
+    const dA = new Date(yearA, monthA - 1, dayA);
+    const dB = new Date(yearB, monthB - 1, dayB);
+    
+    return dB - dA;
   });
 
   const totalFilteredBalance = filteredShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
@@ -349,25 +369,29 @@ export default function ShopsScreen({ navigation }) {
                   <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase' }}>Debt Given</Text>
                   <Text variant="bodySmall" style={{ fontWeight: 'bold', marginTop: 2 }}>{item.orderDate || item.lastTransactionDate || 'N/A'}</Text>
                 </View>
-                <View>
-                  <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase' }}>Due Date</Text>
-                  <Text variant="bodySmall" style={{ fontWeight: 'bold', marginTop: 2 }}>{item.lastTransactionDate || 'N/A'}</Text>
-                </View>
+                {item.lastPaymentDate && (
+                  <View>
+                    <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase' }}>Paid On</Text>
+                    <Text variant="bodySmall" style={{ fontWeight: 'bold', marginTop: 2, color: '#2E7D32' }}>{item.lastPaymentDate}</Text>
+                  </View>
+                )}
               </View>
             </View>
             
             <View style={{ alignItems: 'flex-end', paddingLeft: 8 }}>
-              <View style={{ alignItems: 'flex-end', marginBottom: 8 }}>
-                <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase', marginBottom: 2 }}>Balance</Text>
-                <Text style={{ fontWeight: '900', fontSize: 18, color: item.currentBalance > 0 ? theme.colors.error : '#4CAF50' }}>
-                  ₹{item.currentBalance}
-                </Text>
-              </View>
+              {item.currentBalance > 0 && (
+                <View style={{ alignItems: 'flex-end', marginBottom: 8 }}>
+                  <Text variant="labelSmall" style={{ color: 'gray', textTransform: 'uppercase', marginBottom: 2 }}>Balance</Text>
+                  <Text style={{ fontWeight: '900', fontSize: 18, color: theme.colors.error }}>
+                    ₹{item.currentBalance}
+                  </Text>
+                </View>
+              )}
               
               {item.paymentStatus && (
-                <View style={{ backgroundColor: item.paymentStatus === 'Paid' ? '#E8F5E9' : '#FFF3E0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: 8 }}>
-                  <Text variant="labelSmall" style={{ color: item.paymentStatus === 'Paid' ? '#2E7D32' : '#E65100', fontSize: 10, fontWeight: 'bold' }}>
-                    {item.paymentStatus}
+                <View style={{ backgroundColor: item.paymentStatus === 'Paid' ? '#E8F5E9' : '#FFF3E0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, marginBottom: 8 }}>
+                  <Text variant="labelMedium" style={{ color: item.paymentStatus === 'Paid' ? '#2E7D32' : '#E65100', fontSize: 14, fontWeight: '900' }}>
+                    {item.paymentStatus}{item.lastPaymentAmount ? ` (₹${item.lastPaymentAmount})` : ''}
                   </Text>
                 </View>
               )}
