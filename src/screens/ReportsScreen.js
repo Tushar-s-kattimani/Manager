@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Linking, Platform } from 'react-native';
-import { Text, useTheme, Card, List, Avatar, IconButton, Chip } from 'react-native-paper';
+import { Text, useTheme, Card, List, Avatar, IconButton, Chip, Searchbar } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
@@ -14,6 +14,9 @@ export default function ReportsScreen() {
 
   const [dateFilter, setDateFilter] = useState(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedVehicleFilter, setSelectedVehicleFilter] = useState(null);
+  const [paymentFilter, setPaymentFilter] = useState('all');
 
   const formatDate = (dateObj) => {
     if (!dateObj) return null;
@@ -28,24 +31,36 @@ export default function ReportsScreen() {
     setDateFilter(formatDate(params.date));
   };
 
-  // Apply date filter
-  const filteredShops = dateFilter 
-    ? shops.filter(s => s.lastTransactionDate === dateFilter || s.orderDate === dateFilter || s.lastPaymentDate === dateFilter)
-    : shops;
+  // Apply filters
+  const filteredShops = shops.filter(s => {
+    if (dateFilter && s.lastTransactionDate !== dateFilter && s.orderDate !== dateFilter && s.lastPaymentDate !== dateFilter) return false;
+    if (selectedVehicleFilter && s.vehicleId !== selectedVehicleFilter) return false;
+    if (paymentFilter === 'paid' && s.currentBalance > 0) return false;
+    if (paymentFilter === 'notPaid' && s.currentBalance <= 0) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchName = s.name?.toLowerCase().includes(query);
+      const matchOwner = s.ownerName?.toLowerCase().includes(query);
+      const matchArea = s.area?.toLowerCase().includes(query);
+      const matchPlace = s.place?.toLowerCase().includes(query);
+      if (!matchName && !matchOwner && !matchArea && !matchPlace) return false;
+    }
+    return true;
+  });
 
   // Calculate Grand Total
   const grandTotalDebt = filteredShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
 
   // Group shops by Salesman (Vehicle)
-  const salesmanData = vehicles.map(vehicle => {
-    const assignedShops = filteredShops.filter(s => s.vehicleId === vehicle.id);
-    const totalDebt = assignedShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
-    return {
-      ...vehicle,
-      assignedShops,
-      totalDebt
-    };
-  }).sort((a, b) => b.totalDebt - a.totalDebt); // Sort by highest debt
+  const salesmanData = vehicles
+    .filter(v => !selectedVehicleFilter || v.id === selectedVehicleFilter)
+    .map(vehicle => {
+      const assignedShops = filteredShops.filter(s => s.vehicleId === vehicle.id);
+      const totalDebt = assignedShops.reduce((sum, shop) => sum + shop.currentBalance, 0);
+      return { ...vehicle, assignedShops, totalDebt };
+    })
+    .filter(v => (searchQuery ? v.assignedShops.length > 0 : true))
+    .sort((a, b) => b.totalDebt - a.totalDebt); // Sort by highest debt
 
   const generateMessage = (salesman, isWhatsApp = false) => {
     let msg = '';
@@ -281,7 +296,21 @@ export default function ReportsScreen() {
         </LinearGradient>
 
         <View style={styles.filtersSection}>
-          <Text style={styles.filterLabel}>Filters</Text>
+          <Searchbar
+            placeholder="Search shops, owners, areas..."
+            onChangeText={setSearchQuery}
+            value={searchQuery}
+            style={{ marginHorizontal: 16, marginBottom: 12, elevation: 0, backgroundColor: '#F1F5F9', borderRadius: 12, height: 44 }}
+            inputStyle={{ minHeight: 44, paddingBottom: 0 }}
+          />
+          <Text style={styles.filterLabel}>Payment Status:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chipScroll, { marginBottom: 12 }]}>
+            <Chip selected={paymentFilter === 'all'} onPress={() => setPaymentFilter('all')} style={styles.chip} showSelectedOverlay>All</Chip>
+            <Chip selected={paymentFilter === 'paid'} onPress={() => setPaymentFilter('paid')} style={styles.chip} showSelectedOverlay>Paid</Chip>
+            <Chip selected={paymentFilter === 'notPaid'} onPress={() => setPaymentFilter('notPaid')} style={styles.chip} showSelectedOverlay>Not Paid</Chip>
+          </ScrollView>
+
+          <Text style={styles.filterLabel}>Filters:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
             <Chip 
               icon="calendar" 
@@ -291,8 +320,12 @@ export default function ReportsScreen() {
               style={styles.chip} 
               showSelectedOverlay
             >
-              {dateFilter ? `Date: ${dateFilter}` : 'Select Date Filter'}
+              {dateFilter ? `Date: ${dateFilter}` : 'Select Date'}
             </Chip>
+            <Chip selected={selectedVehicleFilter === null} onPress={() => setSelectedVehicleFilter(null)} style={styles.chip} showSelectedOverlay>All Salesmen</Chip>
+            {vehicles.map(v => (
+              <Chip key={v.id} selected={selectedVehicleFilter === v.id} onPress={() => setSelectedVehicleFilter(v.id)} style={styles.chip} showSelectedOverlay>{v.salesman || v.name}</Chip>
+            ))}
           </ScrollView>
         </View>
         <Animatable.View animation="fadeInUp" delay={200}>

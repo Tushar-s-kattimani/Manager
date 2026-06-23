@@ -39,6 +39,10 @@ export default function ShopsScreen({ navigation }) {
   const [mobileInput, setMobileInput] = useState('');
   const [pendingAction, setPendingAction] = useState(null);
 
+  // Bulk Send State
+  const [bulkSendDialogVisible, setBulkSendDialogVisible] = useState(false);
+
+
   const showDialog = (shop = null) => {
     if (shop) {
       setEditingId(shop.id);
@@ -274,6 +278,14 @@ export default function ShopsScreen({ navigation }) {
     return encodeURIComponent(msg.trim());
   };
 
+  const formatWhatsAppLink = (mobile, msg) => {
+    let phone = mobile.replace(/\D/g, '');
+    if (phone.length === 10) {
+      phone = `91${phone}`;
+    }
+    return `https://wa.me/${phone}?text=${msg}`;
+  };
+
   const sendShopSMS = (shop, assignedVehicle) => {
     if (!shop.mobile) { 
       setMobileShopToUpdate(shop);
@@ -296,7 +308,96 @@ export default function ShopsScreen({ navigation }) {
       return; 
     }
     const msg = generateShopMessage(shop, assignedVehicle, true);
-    Linking.openURL(`whatsapp://send?phone=${shop.mobile}&text=${msg}`);
+    Linking.openURL(formatWhatsAppLink(shop.mobile, msg));
+  };
+
+  const generateBulkGroupedMessage = (shops, assignedVehicle, isWhatsApp = false) => {
+    const firstShop = shops[0];
+    let msg = isWhatsApp ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n\n` : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n\n`;
+    
+    const totalBalance = shops.reduce((sum, s) => sum + s.currentBalance, 0);
+    
+    if (totalBalance > 0) {
+      msg += `⚠️ This is a reminder regarding your outstanding debt.\n\n`;
+    } else {
+      msg += `📋 This is a summary of your account with us.\n\n`;
+    }
+    
+    const placeStr = firstShop.place || firstShop.area ? `(${firstShop.place || firstShop.area})` : '';
+    
+    if (isWhatsApp) {
+      msg += `🏬 *Shop:* ${firstShop.name} ${placeStr}\n`;
+      msg += `👤 *Salesman:* ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
+    } else {
+      msg += `🏬 Shop: ${firstShop.name} ${placeStr}\n`;
+      msg += `👤 Salesman: ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
+    }
+    
+    if (shops.length > 1) {
+      msg += isWhatsApp ? `📋 *Debt Details:*\n` : `📋 Debt Details:\n`;
+      shops.forEach(s => {
+        const dateGiven = s.orderDate || s.lastTransactionDate || 'N/A';
+        msg += `• ${dateGiven}: ₹${s.currentBalance}\n`;
+      });
+      msg += `\n`;
+    } else {
+      const dateGiven = firstShop.orderDate || firstShop.lastTransactionDate || 'N/A';
+      msg += isWhatsApp ? `📅 *Date Given:* ${dateGiven}\n` : `📅 Date Given: ${dateGiven}\n`;
+    }
+    
+    if (isWhatsApp) {
+      msg += `💰 *Total Balance: ₹${totalBalance}*\n\n`;
+    } else {
+      msg += `💰 Total Balance: ₹${totalBalance}\n\n`;
+    }
+    
+    if (totalBalance > 0) {
+      msg += `Please arrange for the payment at the earliest.`;
+    }
+    
+    return encodeURIComponent(msg.trim());
+  };
+
+  const initiateBulkSend = () => {
+    const shopsWithMobile = filteredShops.filter(s => s.mobile);
+    if (shopsWithMobile.length === 0) {
+      alert("No shops in the current list have a mobile number saved.");
+      return;
+    }
+    setBulkSendDialogVisible(true);
+  };
+
+  const executeBulkSend = async (mode) => {
+    setBulkSendDialogVisible(false);
+    
+    const shopsWithMobile = filteredShops.filter(s => s.mobile);
+    const groupedByMobile = {};
+    shopsWithMobile.forEach(shop => {
+      const num = shop.mobile.trim();
+      if (!groupedByMobile[num]) groupedByMobile[num] = [];
+      groupedByMobile[num].push(shop);
+    });
+
+    const uniqueMobiles = Object.keys(groupedByMobile);
+
+    if (Platform.OS !== 'web' && uniqueMobiles.length > 1) {
+      alert(`This will open ${mode === 'whatsapp' ? 'WhatsApp' : 'Messages'} ${uniqueMobiles.length} times. Please press 'Send' and then return to the app for the next one.`);
+    }
+
+    for (const mobile of uniqueMobiles) {
+      const groupedShops = groupedByMobile[mobile];
+      const assignedVehicle = vehicles.find(v => v.id === groupedShops[0].vehicleId);
+      const isWhatsApp = mode === 'whatsapp';
+      const msg = generateBulkGroupedMessage(groupedShops, assignedVehicle, isWhatsApp);
+      
+      if (isWhatsApp) {
+        Linking.openURL(formatWhatsAppLink(mobile, msg));
+      } else {
+        const separator = Platform.OS === 'ios' ? '&' : '?';
+        Linking.openURL(`sms:${mobile}${separator}body=${msg}`);
+      }
+      await new Promise(r => setTimeout(r, 1500));
+    }
   };
 
   const handleSaveMobile = () => {
@@ -316,7 +417,7 @@ export default function ShopsScreen({ navigation }) {
         Linking.openURL(`sms:${updatedShop.mobile}${separator}body=${msg}`);
       } else if (pendingAction.type === 'whatsapp') {
         const msg = generateShopMessage(updatedShop, pendingAction.assignedVehicle, true);
-        Linking.openURL(`whatsapp://send?phone=${updatedShop.mobile}&text=${msg}`);
+        Linking.openURL(formatWhatsAppLink(updatedShop.mobile, msg));
       }
     }
   };
@@ -399,6 +500,7 @@ export default function ShopsScreen({ navigation }) {
               <View style={{ flexDirection: 'row', marginTop: 4 }}>
                 <IconButton icon="whatsapp" size={20} iconColor="#25D366" containerColor="#E8F5E9" style={{ margin: 0, marginRight: 8 }} onPress={() => sendShopWhatsApp(item, assignedVehicle)} />
                 <IconButton icon="message-text" size={20} iconColor="#007AFF" containerColor="#E3F2FD" style={{ margin: 0, marginRight: 8 }} onPress={() => sendShopSMS(item, assignedVehicle)} />
+                <IconButton icon="pencil" size={20} iconColor="#FF9800" containerColor="#FFF3E0" style={{ margin: 0, marginRight: 8 }} onPress={() => showDialog(item)} />
                 {item.currentBalance > 0 && (
                   <IconButton icon="cash-plus" size={20} iconColor="#4CAF50" containerColor="#E8F5E9" style={{ margin: 0, marginRight: 8 }} onPress={() => showPaymentDialog(item)} />
                 )}
@@ -461,6 +563,9 @@ export default function ShopsScreen({ navigation }) {
                   <Text variant="bodySmall" style={{ color: 'gray' }}>Showing {filteredShops.length} shops</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {filteredShops.length > 0 && searchQuery.length > 0 && (
+                    <Button icon="send" mode="contained-tonal" onPress={initiateBulkSend} style={{ marginRight: 8, backgroundColor: '#E3F2FD' }} textColor="#1976D2">Send All</Button>
+                  )}
                   <IconButton icon="file-pdf-box" iconColor={theme.colors.primary} size={28} onPress={downloadPDF} style={{ marginRight: 8 }} />
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text variant="bodySmall" style={{ fontWeight: 'bold', color: 'gray', textTransform: 'uppercase' }}>Total Balance</Text>
@@ -580,6 +685,16 @@ export default function ShopsScreen({ navigation }) {
               {pendingAction ? 'Save & Send' : 'Save'}
             </Button>
           </Dialog.Actions>
+        </Dialog>
+        <Dialog visible={bulkSendDialogVisible} onDismiss={() => setBulkSendDialogVisible(false)} style={{ borderRadius: 16 }}>
+          <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Send Bulk Messages</Dialog.Title>
+          <Dialog.Content>
+            <Text>How would you like to send these {Object.keys(filteredShops.filter(s => s.mobile).reduce((acc, s) => { acc[s.mobile.trim()] = true; return acc; }, {})).length} consolidated messages?</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 24 }}>
+              <Button icon="message-text" mode="outlined" onPress={() => executeBulkSend('sms')} style={{ borderColor: '#007AFF', borderRadius: 8 }} textColor="#007AFF">SMS</Button>
+              <Button icon="whatsapp" mode="contained" onPress={() => executeBulkSend('whatsapp')} buttonColor="#25D366" style={{ borderRadius: 8 }}>WhatsApp</Button>
+            </View>
+          </Dialog.Content>
         </Dialog>
       </Portal>
 
