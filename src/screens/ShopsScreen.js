@@ -311,57 +311,57 @@ export default function ShopsScreen({ navigation }) {
     Linking.openURL(formatWhatsAppLink(shop.mobile, msg));
   };
 
-  const generateBulkGroupedMessage = (shops, assignedVehicle, isWhatsApp = false) => {
-    const firstShop = shops[0];
-    let msg = isWhatsApp ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n\n` : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n\n`;
-    
-    const totalBalance = shops.reduce((sum, s) => sum + s.currentBalance, 0);
-    
-    if (totalBalance > 0) {
-      msg += `⚠️ This is a reminder regarding your outstanding debt.\n\n`;
-    } else {
-      msg += `📋 This is a summary of your account with us.\n\n`;
-    }
-    
-    const placeStr = firstShop.place || firstShop.area ? `(${firstShop.place || firstShop.area})` : '';
-    
-    if (isWhatsApp) {
-      msg += `🏬 *Shop:* ${firstShop.name} ${placeStr}\n`;
-      msg += `👤 *Salesman:* ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
-    } else {
-      msg += `🏬 Shop: ${firstShop.name} ${placeStr}\n`;
-      msg += `👤 Salesman: ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
-    }
-    
-    if (shops.length > 1) {
-      msg += isWhatsApp ? `📋 *Debt Details:*\n` : `📋 Debt Details:\n`;
-      shops.forEach(s => {
-        const dateGiven = s.orderDate || s.lastTransactionDate || 'N/A';
-        msg += `• ${dateGiven}: ₹${s.currentBalance}\n`;
+  const generateMasterListMessage = (shops, totalBalance, isWhatsApp = false) => {
+    let msg = isWhatsApp ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n` : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n`;
+    msg += isWhatsApp ? `*Filtered Shops Report*\n\n` : `Filtered Shops Report\n\n`;
+
+    const grouped = {};
+    shops.forEach(shop => {
+      const shopName = shop.name ? shop.name.trim() : '';
+      const placeStr = shop.place ? shop.place.trim() : (shop.area ? shop.area.trim() : '');
+      const key = `${shopName.toLowerCase()}_${placeStr.toLowerCase()}`;
+      
+      if (!grouped[key]) {
+        grouped[key] = {
+          name: shopName || 'Unknown',
+          place: placeStr,
+          entries: []
+        };
+      }
+      grouped[key].entries.push(shop);
+    });
+
+    let index = 1;
+    Object.values(grouped).forEach(group => {
+      const placeStr = group.place ? `(${group.place})` : '';
+      if (isWhatsApp) {
+        msg += `*${index}. ${group.name}* ${placeStr}\n`;
+      } else {
+        msg += `${index}. ${group.name} ${placeStr}\n`;
+      }
+      
+      group.entries.forEach(entry => {
+        const dateStr = entry.orderDate || entry.lastTransactionDate || 'N/A';
+        msg += `   • Date: ${dateStr} | Bal: ₹${entry.currentBalance}\n`;
       });
       msg += `\n`;
-    } else {
-      const dateGiven = firstShop.orderDate || firstShop.lastTransactionDate || 'N/A';
-      msg += isWhatsApp ? `📅 *Date Given:* ${dateGiven}\n` : `📅 Date Given: ${dateGiven}\n`;
-    }
-    
+      index++;
+    });
+
     if (isWhatsApp) {
-      msg += `💰 *Total Balance: ₹${totalBalance}*\n\n`;
+      msg += `*Total Shops:* ${shops.length}\n`;
+      msg += `*Total Balance:* ₹${totalBalance}\n`;
     } else {
-      msg += `💰 Total Balance: ₹${totalBalance}\n\n`;
+      msg += `Total Shops: ${shops.length}\n`;
+      msg += `Total Balance: ₹${totalBalance}\n`;
     }
-    
-    if (totalBalance > 0) {
-      msg += `Please arrange for the payment at the earliest.`;
-    }
-    
+
     return encodeURIComponent(msg.trim());
   };
 
   const initiateBulkSend = () => {
-    const shopsWithMobile = filteredShops.filter(s => s.mobile);
-    if (shopsWithMobile.length === 0) {
-      alert("No shops in the current list have a mobile number saved.");
+    if (filteredShops.length === 0) {
+      alert("No shops to send.");
       return;
     }
     setBulkSendDialogVisible(true);
@@ -370,33 +370,14 @@ export default function ShopsScreen({ navigation }) {
   const executeBulkSend = async (mode) => {
     setBulkSendDialogVisible(false);
     
-    const shopsWithMobile = filteredShops.filter(s => s.mobile);
-    const groupedByMobile = {};
-    shopsWithMobile.forEach(shop => {
-      const num = shop.mobile.trim();
-      if (!groupedByMobile[num]) groupedByMobile[num] = [];
-      groupedByMobile[num].push(shop);
-    });
-
-    const uniqueMobiles = Object.keys(groupedByMobile);
-
-    if (Platform.OS !== 'web' && uniqueMobiles.length > 1) {
-      alert(`This will open ${mode === 'whatsapp' ? 'WhatsApp' : 'Messages'} ${uniqueMobiles.length} times. Please press 'Send' and then return to the app for the next one.`);
-    }
-
-    for (const mobile of uniqueMobiles) {
-      const groupedShops = groupedByMobile[mobile];
-      const assignedVehicle = vehicles.find(v => v.id === groupedShops[0].vehicleId);
-      const isWhatsApp = mode === 'whatsapp';
-      const msg = generateBulkGroupedMessage(groupedShops, assignedVehicle, isWhatsApp);
-      
-      if (isWhatsApp) {
-        Linking.openURL(formatWhatsAppLink(mobile, msg));
-      } else {
-        const separator = Platform.OS === 'ios' ? '&' : '?';
-        Linking.openURL(`sms:${mobile}${separator}body=${msg}`);
-      }
-      await new Promise(r => setTimeout(r, 1500));
+    const isWhatsApp = mode === 'whatsapp';
+    const msg = generateMasterListMessage(filteredShops, totalFilteredBalance, isWhatsApp);
+    
+    if (isWhatsApp) {
+      Linking.openURL(`https://wa.me/?text=${msg}`);
+    } else {
+      const separator = Platform.OS === 'ios' ? '&' : '?';
+      Linking.openURL(`sms:${separator}body=${msg}`);
     }
   };
 
@@ -687,9 +668,9 @@ export default function ShopsScreen({ navigation }) {
           </Dialog.Actions>
         </Dialog>
         <Dialog visible={bulkSendDialogVisible} onDismiss={() => setBulkSendDialogVisible(false)} style={{ borderRadius: 16 }}>
-          <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Send Bulk Messages</Dialog.Title>
+          <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Share List Summary</Dialog.Title>
           <Dialog.Content>
-            <Text>How would you like to send these {Object.keys(filteredShops.filter(s => s.mobile).reduce((acc, s) => { acc[s.mobile.trim()] = true; return acc; }, {})).length} consolidated messages?</Text>
+            <Text>How would you like to share this summary list of {filteredShops.length} shops?</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 24 }}>
               <Button icon="message-text" mode="outlined" onPress={() => executeBulkSend('sms')} style={{ borderColor: '#007AFF', borderRadius: 8 }} textColor="#007AFF">SMS</Button>
               <Button icon="whatsapp" mode="contained" onPress={() => executeBulkSend('whatsapp')} buttonColor="#25D366" style={{ borderRadius: 8 }}>WhatsApp</Button>
