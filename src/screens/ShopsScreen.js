@@ -374,7 +374,11 @@ export default function ShopsScreen({ navigation }) {
     const msg = generateMasterListMessage(filteredShops, totalFilteredBalance, isWhatsApp);
     
     if (isWhatsApp) {
-      Linking.openURL(`https://wa.me/?text=${msg}`);
+      if (Platform.OS === 'web') {
+        Linking.openURL(`https://wa.me/?text=${msg}`);
+      } else {
+        Linking.openURL(`whatsapp://send?text=${msg}`);
+      }
     } else {
       const separator = Platform.OS === 'ios' ? '&' : '?';
       Linking.openURL(`sms:${separator}body=${msg}`);
