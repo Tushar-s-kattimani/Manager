@@ -50,7 +50,9 @@ export default function ShopsScreen({ navigation }) {
       setForm(shop);
     } else {
       setEditingId(null);
-      setForm({ name: '', ownerName: '', area: '', place: '', mobile: '', orderDate: formatDate(new Date()), vehicleId: selectedVehicleFilter || (vehicles.length > 0 ? vehicles[0].id : '') });
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      setForm({ name: '', ownerName: '', area: '', place: '', mobile: '', orderDate: formatDate(yesterday), vehicleId: selectedVehicleFilter || (vehicles.length > 0 ? vehicles[0].id : '') });
     }
     setVisible(true);
   };
