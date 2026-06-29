@@ -407,48 +407,33 @@ export default function ShopsScreen({ navigation }) {
   };
 
   const generateMasterListMessage = (shops, totalBalance, isWhatsApp = false) => {
-    let msg = isWhatsApp ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n` : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n`;
-    msg += isWhatsApp ? `*Filtered Shops Report*\n\n` : `Filtered Shops Report\n\n`;
+    let msg = isWhatsApp ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n\n` : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n\n`;
+    
+    msg += isWhatsApp ? `⚠️ *Outstanding Debts Report*\n\n` : `⚠️ Outstanding Debts Report\n\n`;
 
-    const grouped = {};
-    shops.forEach(shop => {
-      const shopName = shop.name ? shop.name.trim() : '';
-      const placeStr = shop.place ? shop.place.trim() : (shop.area ? shop.area.trim() : '');
-      const key = `${shopName.toLowerCase()}_${placeStr.toLowerCase()}`;
+    shops.forEach((shop) => {
+      const placeStr = shop.place || shop.area ? `(${shop.place || shop.area})` : '';
+      const dateStr = shop.orderDate || shop.lastTransactionDate || 'N/A';
       
-      if (!grouped[key]) {
-        grouped[key] = {
-          name: shopName || 'Unknown',
-          place: placeStr,
-          entries: []
-        };
-      }
-      grouped[key].entries.push(shop);
-    });
-
-    let index = 1;
-    Object.values(grouped).forEach(group => {
-      const placeStr = group.place ? `(${group.place})` : '';
       if (isWhatsApp) {
-        msg += `*${index}. ${group.name}* ${placeStr}\n`;
+        msg += `🏬 *Shop:* ${shop.name} ${placeStr}\n`;
+        msg += `📅 *Date Given:* ${dateStr}\n`;
+        msg += `💰 *Total Balance: ₹${shop.currentBalance}*\n\n`;
       } else {
-        msg += `${index}. ${group.name} ${placeStr}\n`;
+        msg += `🏬 Shop: ${shop.name} ${placeStr}\n`;
+        msg += `📅 Date Given: ${dateStr}\n`;
+        msg += `💰 Total Balance: ₹${shop.currentBalance}\n\n`;
       }
-      
-      group.entries.forEach(entry => {
-        const dateStr = entry.orderDate || entry.lastTransactionDate || 'N/A';
-        msg += `   • Date: ${dateStr} | Bal: ₹${entry.currentBalance}\n`;
-      });
-      msg += `\n`;
-      index++;
     });
 
     if (isWhatsApp) {
       msg += `*Total Shops:* ${shops.length}\n`;
-      msg += `*Total Balance:* ₹${totalBalance}\n`;
+      msg += `*Grand Total Balance: ₹${totalBalance}*\n\n`;
+      msg += `Please let us know how long it will take to clear these payments.`;
     } else {
       msg += `Total Shops: ${shops.length}\n`;
-      msg += `Total Balance: ₹${totalBalance}\n`;
+      msg += `Grand Total Balance: ₹${totalBalance}\n\n`;
+      msg += `Please let us know how long it will take to clear these payments.`;
     }
 
     return encodeURIComponent(msg.trim());
