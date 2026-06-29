@@ -16,6 +16,7 @@ export default function ShopsScreen({ navigation }) {
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [shopDatePickerOpen, setShopDatePickerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [visible, setVisible] = useState(false);
@@ -49,7 +50,7 @@ export default function ShopsScreen({ navigation }) {
       setForm(shop);
     } else {
       setEditingId(null);
-      setForm({ name: '', ownerName: '', area: '', place: '', mobile: '', vehicleId: selectedVehicleFilter || (vehicles.length > 0 ? vehicles[0].id : '') });
+      setForm({ name: '', ownerName: '', area: '', place: '', mobile: '', orderDate: formatDate(new Date()), vehicleId: selectedVehicleFilter || (vehicles.length > 0 ? vehicles[0].id : '') });
     }
     setVisible(true);
   };
@@ -583,6 +584,11 @@ export default function ShopsScreen({ navigation }) {
               <TextInput label="Area" value={form.area} onChangeText={(t) => setForm({...form, area: t})} mode="outlined" style={styles.input} theme={{roundness: 10}} />
               <TextInput label="Place" value={form.place} onChangeText={(t) => setForm({...form, place: t})} mode="outlined" style={styles.input} theme={{roundness: 10}} />
               
+              <Text style={{ marginTop: 12, marginBottom: 8, color: 'gray', fontWeight: 'bold' }}>Date Given:</Text>
+              <Button icon="calendar" mode="outlined" onPress={() => setShopDatePickerOpen(true)} style={{ borderRadius: 8, marginBottom: 12, alignSelf: 'flex-start' }}>
+                {form.orderDate || form.lastTransactionDate ? `Date: ${form.orderDate || form.lastTransactionDate}` : 'Select Date'}
+              </Button>
+              
               <Text style={{ marginTop: 12, marginBottom: 8, color: 'gray', fontWeight: 'bold' }}>Assign to Vehicle:</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                 {vehicles.map(v => (
@@ -607,6 +613,18 @@ export default function ShopsScreen({ navigation }) {
         onDismiss={() => setDatePickerOpen(false)}
         date={dateFilter ? new Date(dateFilter.split('-').reverse().join('-')) : new Date()}
         onConfirm={onConfirmDate}
+      />
+
+      <DatePickerModal
+        locale="en-GB"
+        mode="single"
+        visible={shopDatePickerOpen}
+        onDismiss={() => setShopDatePickerOpen(false)}
+        date={(form.orderDate || form.lastTransactionDate) ? new Date((form.orderDate || form.lastTransactionDate).split('-').reverse().join('-')) : new Date()}
+        onConfirm={(params) => {
+          setShopDatePickerOpen(false);
+          setForm({ ...form, orderDate: formatDate(params.date) });
+        }}
       />
 
       <Portal>

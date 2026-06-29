@@ -2,6 +2,9 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
+const USER_EMAIL = 'tusharshivakumarkattimani@gmail.com';
+const USER_PATH = `users/${USER_EMAIL}`;
+
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
@@ -11,18 +14,30 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Setup listeners
-    const unsubscribeVehicles = onSnapshot(collection(db, 'vehicles'), (snapshot) => {
+    let shopsLoaded = false;
+    let vehiclesLoaded = false;
+
+    const checkLoading = () => {
+      if (shopsLoaded && vehiclesLoaded) {
+        setLoading(false);
+      }
+    };
+
+    const unsubscribeVehicles = onSnapshot(collection(db, `${USER_PATH}/vehicles`), (snapshot) => {
       setVehicles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      vehiclesLoaded = true;
+      checkLoading();
     });
 
-    const unsubscribeShops = onSnapshot(collection(db, 'shops'), (snapshot) => {
+    const unsubscribeShops = onSnapshot(collection(db, `${USER_PATH}/shops`), (snapshot) => {
       setShops(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      shopsLoaded = true;
+      checkLoading();
     });
 
-    const unsubscribeTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
+    // Transactions load silently in the background without blocking the app
+    const unsubscribeTransactions = onSnapshot(collection(db, `${USER_PATH}/transactions`), (snapshot) => {
       setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
     });
 
     return () => {
@@ -40,9 +55,9 @@ export function AppProvider({ children }) {
   };
 
   // Vehicle Actions
-  const addVehicle = async (vehicle) => await addDoc(collection(db, 'vehicles'), vehicle);
-  const updateVehicle = async (id, updatedData) => await updateDoc(doc(db, 'vehicles', id), updatedData);
-  const deleteVehicle = async (id) => await deleteDoc(doc(db, 'vehicles', id));
+  const addVehicle = async (vehicle) => await addDoc(collection(db, `${USER_PATH}/vehicles`), vehicle);
+  const updateVehicle = async (id, updatedData) => await updateDoc(doc(db, `${USER_PATH}/vehicles`, id), updatedData);
+  const deleteVehicle = async (id) => await deleteDoc(doc(db, `${USER_PATH}/vehicles`, id));
 
   // Shop Actions
   const addShop = async (shop) => {
@@ -52,10 +67,10 @@ export function AppProvider({ children }) {
       ...shop 
     };
     
-    const shopRef = await addDoc(collection(db, 'shops'), shopData);
+    const shopRef = await addDoc(collection(db, `${USER_PATH}/shops`), shopData);
 
     if (shopData.currentBalance > 0) {
-      await addDoc(collection(db, 'transactions'), {
+      await addDoc(collection(db, `${USER_PATH}/transactions`), {
         shopId: shopRef.id,
         type: 'debt',
         amount: Number(shopData.currentBalance),
@@ -65,8 +80,8 @@ export function AppProvider({ children }) {
       });
     }
   };
-  const updateShop = async (id, updatedData) => await updateDoc(doc(db, 'shops', id), updatedData);
-  const deleteShop = async (id) => await deleteDoc(doc(db, 'shops', id));
+  const updateShop = async (id, updatedData) => await updateDoc(doc(db, `${USER_PATH}/shops`, id), updatedData);
+  const deleteShop = async (id) => await deleteDoc(doc(db, `${USER_PATH}/shops`, id));
 
   // Payment Actions
   const recordPayment = async (shopId, paymentDetails) => {
@@ -76,7 +91,7 @@ export function AppProvider({ children }) {
     const paymentAmount = Number(paymentDetails.amount);
     const newBalanceRecord = Math.max(0, Number(shop.currentBalance) - paymentAmount);
     
-    await updateDoc(doc(db, 'shops', shopId), {
+    await updateDoc(doc(db, `${USER_PATH}/shops`, shopId), {
       currentBalance: newBalanceRecord,
       paymentStatus: newBalanceRecord === 0 ? 'Paid' : 'Partial',
       lastPaymentMode: paymentDetails.mode,
@@ -84,7 +99,7 @@ export function AppProvider({ children }) {
       lastPaymentDate: paymentDetails.date
     });
 
-    await addDoc(collection(db, 'transactions'), {
+    await addDoc(collection(db, `${USER_PATH}/transactions`), {
       shopId: shopId,
       type: 'payment',
       amount: paymentAmount,
