@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, FlatList } from 'react-native';
-import { Text, useTheme, Card, Avatar, Chip, Surface } from 'react-native-paper';
+import { Text, useTheme, Card, Avatar, Chip, Surface, IconButton, Portal, Dialog, TextInput, Button } from 'react-native-paper';
 import { DatePickerModal } from 'react-native-paper-dates';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
@@ -8,11 +8,17 @@ import { useAppContext } from '../context/AppContext';
 
 export default function HistoryScreen() {
   const theme = useTheme();
-  const { vehicles, shops, transactions } = useAppContext();
+  const { vehicles, shops, transactions, updateTransaction } = useAppContext();
   
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [dateFilter, setDateFilter] = useState(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  const [editingTransactionId, setEditingTransactionId] = useState(null);
+  const [transactionDatePickerOpen, setTransactionDatePickerOpen] = useState(false);
+  const [editPasswordDialogVisible, setEditPasswordDialogVisible] = useState(false);
+  const [editPassword, setEditPassword] = useState('');
+  const [paymentToEdit, setPaymentToEdit] = useState(null);
 
   const formatDate = (dateObj) => {
     if (!dateObj) return null;
@@ -25,6 +31,34 @@ export default function HistoryScreen() {
   const onConfirmDate = (params) => {
     setDatePickerOpen(false);
     setDateFilter(formatDate(params.date));
+  };
+
+  const initiateEdit = (transactionId) => {
+    setPaymentToEdit(transactionId);
+    setEditPassword('');
+    setEditPasswordDialogVisible(true);
+  };
+
+  const confirmEdit = () => {
+    if (editPassword === '151571') {
+      setEditPasswordDialogVisible(false);
+      setEditingTransactionId(paymentToEdit);
+      setTransactionDatePickerOpen(true);
+    } else {
+      alert('Incorrect Password');
+    }
+  };
+
+  const openTransactionDatePicker = (transactionId) => {
+    initiateEdit(transactionId);
+  };
+
+  const onConfirmTransactionDate = async (params) => {
+    setTransactionDatePickerOpen(false);
+    if (editingTransactionId) {
+      await updateTransaction(editingTransactionId, { date: formatDate(params.date) });
+      setEditingTransactionId(null);
+    }
   };
 
   // 1. Get payments
@@ -143,9 +177,19 @@ export default function HistoryScreen() {
                       <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15 }}>{payment.shopName}</Text>
                       <Text variant="bodySmall" style={{ color: 'gray' }}>{payment.mode} • Balance left: ₹{payment.balanceAfter}</Text>
                     </View>
-                    <Text style={{ fontWeight: '900', fontSize: 16, color: '#4CAF50', marginRight: 16 }}>
-                      +₹{payment.amount}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+                      <Text style={{ fontWeight: '900', fontSize: 16, color: '#4CAF50', marginRight: 4 }}>
+                        +₹{payment.amount}
+                      </Text>
+                      <IconButton 
+                        icon="pencil" 
+                        size={18} 
+                        iconColor={theme.colors.primary}
+                        containerColor="#E3F2FD"
+                        onPress={() => openTransactionDatePicker(payment.id)} 
+                        style={{ margin: 0, width: 28, height: 28 }}
+                      />
+                    </View>
                   </View>
                 ))}
               </Card.Content>
@@ -154,6 +198,28 @@ export default function HistoryScreen() {
         )}
       />
 
+      <Portal>
+        <Dialog visible={editPasswordDialogVisible} onDismiss={() => setEditPasswordDialogVisible(false)} style={{ borderRadius: 16 }}>
+          <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Edit Transaction</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ marginBottom: 16 }}>Please enter the password to edit.</Text>
+            <TextInput
+              label="Password"
+              mode="outlined"
+              secureTextEntry
+              value={editPassword}
+              onChangeText={setEditPassword}
+              theme={{ roundness: 10 }}
+              autoComplete="new-password"
+            />
+          </Dialog.Content>
+          <Dialog.Actions style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+            <Button onPress={() => setEditPasswordDialogVisible(false)} textColor="gray">Cancel</Button>
+            <Button onPress={confirmEdit} buttonColor={theme.colors.primary} mode="contained" style={{ marginLeft: 8, borderRadius: 8 }}>Continue</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
       <DatePickerModal
         locale="en-GB"
         mode="single"
@@ -161,6 +227,15 @@ export default function HistoryScreen() {
         onDismiss={() => setDatePickerOpen(false)}
         date={dateFilter ? new Date(dateFilter.split('-').reverse().join('-')) : new Date()}
         onConfirm={onConfirmDate}
+      />
+
+      <DatePickerModal
+        locale="en-GB"
+        mode="single"
+        visible={transactionDatePickerOpen}
+        onDismiss={() => setTransactionDatePickerOpen(false)}
+        date={new Date()}
+        onConfirm={onConfirmTransactionDate}
       />
     </View>
   );

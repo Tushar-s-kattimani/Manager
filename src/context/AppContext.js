@@ -80,7 +80,35 @@ export function AppProvider({ children }) {
       });
     }
   };
-  const updateShop = async (id, updatedData) => await updateDoc(doc(db, `${USER_PATH}/shops`, id), updatedData);
+  const updateShop = async (id, updatedData) => {
+    const oldShop = shops.find(s => s.id === id);
+    
+    await updateDoc(doc(db, `${USER_PATH}/shops`, id), updatedData);
+
+    if (oldShop) {
+      // Sync Payment Date
+      if (oldShop.lastPaymentDate !== updatedData.lastPaymentDate && updatedData.lastPaymentDate) {
+        const paymentTxToUpdate = transactions.find(t => t.shopId === id && t.type === 'payment' && t.date === oldShop.lastPaymentDate);
+        if (paymentTxToUpdate) {
+          await updateDoc(doc(db, `${USER_PATH}/transactions`, paymentTxToUpdate.id), {
+            date: updatedData.lastPaymentDate
+          });
+        }
+      }
+      
+      // Sync Debt Date
+      const oldDebtDate = oldShop.orderDate || oldShop.lastTransactionDate;
+      const newDebtDate = updatedData.orderDate || updatedData.lastTransactionDate;
+      if (oldDebtDate !== newDebtDate && newDebtDate) {
+        const debtTxToUpdate = transactions.find(t => t.shopId === id && t.type === 'debt' && t.date === oldDebtDate);
+        if (debtTxToUpdate) {
+          await updateDoc(doc(db, `${USER_PATH}/transactions`, debtTxToUpdate.id), {
+            date: newDebtDate
+          });
+        }
+      }
+    }
+  };
   const deleteShop = async (id) => await deleteDoc(doc(db, `${USER_PATH}/shops`, id));
 
   // Payment Actions
@@ -109,11 +137,13 @@ export function AppProvider({ children }) {
     });
   };
 
+  const updateTransaction = async (id, updatedData) => await updateDoc(doc(db, `${USER_PATH}/transactions`, id), updatedData);
+
   return (
     <AppContext.Provider value={{
       vehicles, addVehicle, updateVehicle, deleteVehicle,
       shops, addShop, updateShop, deleteShop, recordPayment,
-      transactions, loading
+      transactions, updateTransaction, loading
     }}>
       {children}
     </AppContext.Provider>

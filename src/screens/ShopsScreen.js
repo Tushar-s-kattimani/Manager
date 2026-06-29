@@ -44,6 +44,41 @@ export default function ShopsScreen({ navigation }) {
   // Bulk Send State
   const [bulkSendDialogVisible, setBulkSendDialogVisible] = useState(false);
 
+  // Edit Password State
+  const [editPasswordDialogVisible, setEditPasswordDialogVisible] = useState(false);
+  const [editPassword, setEditPassword] = useState('');
+  const [shopToEdit, setShopToEdit] = useState(null);
+  const [editActionType, setEditActionType] = useState('');
+
+  const initiateEditShop = (shop) => {
+    setShopToEdit(shop);
+    setEditActionType('shop');
+    setEditPassword('');
+    setEditPasswordDialogVisible(true);
+  };
+
+  const initiateEditMobile = (shop) => {
+    setShopToEdit(shop);
+    setEditActionType('mobile');
+    setEditPassword('');
+    setEditPasswordDialogVisible(true);
+  };
+
+  const confirmEdit = () => {
+    if (editPassword === '151571') {
+      setEditPasswordDialogVisible(false);
+      if (editActionType === 'shop') {
+        showDialog(shopToEdit);
+      } else if (editActionType === 'mobile') {
+        setMobileShopToUpdate(shopToEdit);
+        setPendingAction(null);
+        setMobileInput(shopToEdit.mobile || '');
+        setMobileDialogVisible(true);
+      }
+    } else {
+      alert('Incorrect Password');
+    }
+  };
 
   const showDialog = (shop = null) => {
     if (shop) {
@@ -525,12 +560,7 @@ export default function ShopsScreen({ navigation }) {
                   size={16} 
                   iconColor="#1976D2" 
                   style={{ margin: 0, width: 24, height: 24 }} 
-                  onPress={() => {
-                    setMobileShopToUpdate(item);
-                    setPendingAction(null);
-                    setMobileInput(item.mobile || '');
-                    setMobileDialogVisible(true);
-                  }} 
+                  onPress={() => initiateEditMobile(item)} 
                 />
               </View>
               
@@ -569,7 +599,7 @@ export default function ShopsScreen({ navigation }) {
               <View style={{ flexDirection: 'row', marginTop: 4 }}>
                 <IconButton icon="whatsapp" size={20} iconColor="#25D366" containerColor="#E8F5E9" style={{ margin: 0, marginRight: 8 }} onPress={() => sendShopWhatsApp(item, assignedVehicle)} />
                 <IconButton icon="message-text" size={20} iconColor="#007AFF" containerColor="#E3F2FD" style={{ margin: 0, marginRight: 8 }} onPress={() => sendShopSMS(item, assignedVehicle)} />
-                <IconButton icon="pencil" size={20} iconColor="#FF9800" containerColor="#FFF3E0" style={{ margin: 0, marginRight: 8 }} onPress={() => showDialog(item)} />
+                <IconButton icon="pencil" size={20} iconColor="#FF9800" containerColor="#FFF3E0" style={{ margin: 0, marginRight: 8 }} onPress={() => initiateEditShop(item)} />
                 {item.currentBalance > 0 && (
                   <IconButton icon="cash-plus" size={20} iconColor="#4CAF50" containerColor="#E8F5E9" style={{ margin: 0, marginRight: 8 }} onPress={() => showPaymentDialog(item)} />
                 )}
@@ -607,6 +637,8 @@ export default function ShopsScreen({ navigation }) {
                   value={searchQuery}
                   style={{ marginHorizontal: 16, marginBottom: 12, elevation: 0, backgroundColor: '#F1F5F9', borderRadius: 12, height: 44 }}
                   inputStyle={{ minHeight: 44, paddingBottom: 0 }}
+                  autoComplete="off"
+                  autoCorrect={false}
                 />
                 <Text variant="labelSmall" style={styles.filterLabel}>Payment Status:</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
@@ -667,6 +699,26 @@ export default function ShopsScreen({ navigation }) {
 
 
       <Portal>
+        <Dialog visible={editPasswordDialogVisible} onDismiss={() => setEditPasswordDialogVisible(false)} style={{ borderRadius: 16 }}>
+          <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Edit Verification</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ marginBottom: 16 }}>Please enter the password to edit.</Text>
+            <TextInput
+              label="Password"
+              mode="outlined"
+              secureTextEntry
+              value={editPassword}
+              onChangeText={setEditPassword}
+              theme={{ roundness: 10 }}
+              autoComplete="new-password"
+            />
+          </Dialog.Content>
+          <Dialog.Actions style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+            <Button onPress={() => setEditPasswordDialogVisible(false)} textColor="gray">Cancel</Button>
+            <Button onPress={confirmEdit} buttonColor={theme.colors.primary} mode="contained" style={{ marginLeft: 8, borderRadius: 8 }}>Continue</Button>
+          </Dialog.Actions>
+        </Dialog>
+
         <Dialog visible={visible} onDismiss={hideDialog} style={{ backgroundColor: theme.colors.surface, maxHeight: '80%', borderRadius: 16 }}>
           <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>{editingId ? 'Edit Shop' : 'Add New Shop'}</Dialog.Title>
           <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
@@ -771,6 +823,7 @@ export default function ShopsScreen({ navigation }) {
               value={deletePassword}
               onChangeText={setDeletePassword}
               theme={{ roundness: 10 }}
+              autoComplete="new-password"
             />
           </Dialog.Content>
           <Dialog.Actions style={{ paddingHorizontal: 20, paddingBottom: 16 }}>

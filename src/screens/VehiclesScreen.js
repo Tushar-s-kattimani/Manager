@@ -15,6 +15,11 @@ export default function VehiclesScreen() {
   const [salesmanName, setSalesmanName] = useState('');
   const [salesmanMobile, setSalesmanMobile] = useState('');
 
+  // Edit Password State
+  const [editPasswordDialogVisible, setEditPasswordDialogVisible] = useState(false);
+  const [editPassword, setEditPassword] = useState('');
+  const [vehicleToEdit, setVehicleToEdit] = useState(null);
+
   // Delete State
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState(null);
@@ -36,6 +41,21 @@ export default function VehiclesScreen() {
   };
 
   const hideDialog = () => setVisible(false);
+
+  const initiateEdit = (vehicle) => {
+    setVehicleToEdit(vehicle);
+    setEditPassword('');
+    setEditPasswordDialogVisible(true);
+  };
+
+  const confirmEdit = () => {
+    if (editPassword === '151571') {
+      setEditPasswordDialogVisible(false);
+      showDialog(vehicleToEdit);
+    } else {
+      alert('Incorrect Password');
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -84,7 +104,7 @@ export default function VehiclesScreen() {
           )}
           right={(props) => (
             <View style={{ flexDirection: 'row', marginRight: 8 }}>
-              <IconButton {...props} icon="pencil-outline" iconColor={theme.colors.primary} onPress={() => showDialog(item)} />
+              <IconButton {...props} icon="pencil-outline" iconColor={theme.colors.primary} onPress={() => initiateEdit(item)} />
               <IconButton {...props} icon="trash-can-outline" iconColor={theme.colors.error} onPress={() => initiateDelete(item.id)} />
             </View>
           )}
@@ -123,6 +143,26 @@ export default function VehiclesScreen() {
       </Animatable.View>
 
       <Portal>
+        <Dialog visible={editPasswordDialogVisible} onDismiss={() => setEditPasswordDialogVisible(false)} style={{ borderRadius: 16 }}>
+          <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Edit Vehicle</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ marginBottom: 16 }}>Please enter the password to edit.</Text>
+            <TextInput
+              label="Password"
+              mode="outlined"
+              secureTextEntry
+              value={editPassword}
+              onChangeText={setEditPassword}
+              theme={{ roundness: 10 }}
+              autoComplete="new-password"
+            />
+          </Dialog.Content>
+          <Dialog.Actions style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+            <Button onPress={() => setEditPasswordDialogVisible(false)} textColor="gray">Cancel</Button>
+            <Button onPress={confirmEdit} buttonColor={theme.colors.primary} mode="contained" style={{ marginLeft: 8, borderRadius: 8 }}>Continue</Button>
+          </Dialog.Actions>
+        </Dialog>
+
         <Dialog visible={visible} onDismiss={hideDialog} style={{ backgroundColor: theme.colors.surface, borderRadius: 16 }}>
           <Dialog.Title style={{ color: theme.colors.primary, fontWeight: 'bold' }}>{editingId ? 'Edit Vehicle' : 'Add New Vehicle'}</Dialog.Title>
           <Dialog.Content>
@@ -166,6 +206,7 @@ export default function VehiclesScreen() {
               value={deletePassword}
               onChangeText={setDeletePassword}
               theme={{ roundness: 10 }}
+              autoComplete="new-password"
             />
           </Dialog.Content>
           <Dialog.Actions style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
