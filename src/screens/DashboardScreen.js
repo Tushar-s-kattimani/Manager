@@ -67,6 +67,7 @@ export default function DashboardScreen({ setIsAuthenticated }) {
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text variant="headlineLarge" style={{ color: '#fff', fontWeight: 'bold' }}>Dashboard</Text>
+              <IconButton icon="logout" iconColor="#FF3B30" size={24} onPress={() => setIsAuthenticated(false)} style={{ marginLeft: 8 }} />
             </View>
             <Text variant="bodyLarge" style={{ color: 'rgba(255,255,255,0.8)' }}>Overview of your agency</Text>
           </View>
@@ -143,21 +144,6 @@ export default function DashboardScreen({ setIsAuthenticated }) {
             )}
           </Card.Content>
         </Card>
-      </Animatable.View>
-
-      <Animatable.View animation="fadeInUp" delay={800} style={{ paddingHorizontal: 16, marginBottom: 40 }}>
-        <Surface style={{ borderRadius: 16, overflow: 'hidden' }} elevation={2}>
-          <IconButton 
-            icon="logout" 
-            mode="contained"
-            containerColor="#FF3B30"
-            iconColor="#fff"
-            size={24}
-            onPress={() => setIsAuthenticated(false)}
-            style={{ width: '100%', borderRadius: 0, margin: 0, paddingVertical: 8 }}
-          />
-        </Surface>
-        <Text style={{ textAlign: 'center', color: 'gray', marginTop: 8, fontWeight: 'bold' }}>Logout of Admin Portal</Text>
       </Animatable.View>
 
     </ScrollView>

@@ -17,6 +17,7 @@ export default function ShopsScreen({ navigation }) {
   const [dateFilter, setDateFilter] = useState(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [shopDatePickerOpen, setShopDatePickerOpen] = useState(false);
+  const [shopPaymentDatePickerOpen, setShopPaymentDatePickerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [visible, setVisible] = useState(false);
@@ -50,9 +51,7 @@ export default function ShopsScreen({ navigation }) {
       setForm(shop);
     } else {
       setEditingId(null);
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      setForm({ name: '', ownerName: '', area: '', place: '', mobile: '', orderDate: formatDate(yesterday), vehicleId: selectedVehicleFilter || (vehicles.length > 0 ? vehicles[0].id : '') });
+      setForm({ name: '', ownerName: '', area: '', place: '', mobile: '', orderDate: '', vehicleId: selectedVehicleFilter || (vehicles.length > 0 ? vehicles[0].id : '') });
     }
     setVisible(true);
   };
@@ -104,7 +103,10 @@ export default function ShopsScreen({ navigation }) {
     if (selectedVehicleFilter && s.vehicleId !== selectedVehicleFilter) return false;
     if (paymentFilter === 'paid' && s.currentBalance > 0) return false;
     if (paymentFilter === 'notPaid' && s.currentBalance <= 0) return false;
-    if (dateFilter && s.lastTransactionDate !== dateFilter && s.orderDate !== dateFilter && s.lastPaymentDate !== dateFilter) return false;
+    if (dateFilter) {
+      const shopPrimaryDate = s.orderDate || s.lastTransactionDate;
+      if (shopPrimaryDate !== dateFilter && s.lastPaymentDate !== dateFilter) return false;
+    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchName = s.name?.toLowerCase().includes(query);
@@ -679,6 +681,11 @@ export default function ShopsScreen({ navigation }) {
               <Button icon="calendar" mode="outlined" onPress={() => setShopDatePickerOpen(true)} style={{ borderRadius: 8, marginBottom: 12, alignSelf: 'flex-start' }}>
                 {form.orderDate || form.lastTransactionDate ? `Date: ${form.orderDate || form.lastTransactionDate}` : 'Select Date'}
               </Button>
+
+              <Text style={{ marginTop: 12, marginBottom: 8, color: 'gray', fontWeight: 'bold' }}>Paid Date:</Text>
+              <Button icon="calendar" mode="outlined" onPress={() => setShopPaymentDatePickerOpen(true)} style={{ borderRadius: 8, marginBottom: 12, alignSelf: 'flex-start' }}>
+                {form.lastPaymentDate ? `Date: ${form.lastPaymentDate}` : 'Select Date'}
+              </Button>
               
               <Text style={{ marginTop: 12, marginBottom: 8, color: 'gray', fontWeight: 'bold' }}>Assign to Vehicle:</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -715,6 +722,18 @@ export default function ShopsScreen({ navigation }) {
         onConfirm={(params) => {
           setShopDatePickerOpen(false);
           setForm({ ...form, orderDate: formatDate(params.date) });
+        }}
+      />
+
+      <DatePickerModal
+        locale="en-GB"
+        mode="single"
+        visible={shopPaymentDatePickerOpen}
+        onDismiss={() => setShopPaymentDatePickerOpen(false)}
+        date={form.lastPaymentDate ? new Date(form.lastPaymentDate.split('-').reverse().join('-')) : new Date()}
+        onConfirm={(params) => {
+          setShopPaymentDatePickerOpen(false);
+          setForm({ ...form, lastPaymentDate: formatDate(params.date) });
         }}
       />
 

@@ -31,12 +31,8 @@ export default function AddDebtScreen({ navigation }) {
     return `${d}-${m}-${y}`;
   };
 
-  // Initialize dates on mount
   useEffect(() => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = formatDate(yesterday);
-    setOrderDateStr(yesterdayStr);
+    // Removed auto-fill of today's date based on user feedback
   }, []);
 
   const filteredShops = shopName.trim().length > 0 
@@ -90,9 +86,7 @@ export default function AddDebtScreen({ navigation }) {
         setPlace('');
         setMobile('');
         setBalance('');
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        setOrderDateStr(formatDate(yesterday));
+        setOrderDateStr(formatDate(new Date()));
       }
     } catch (error) {
       console.error("Firebase Error: ", error);
