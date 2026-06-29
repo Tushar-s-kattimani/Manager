@@ -246,6 +246,102 @@ export default function ShopsScreen({ navigation }) {
     }
   };
 
+  const generateDebtLetter = async (shop) => {
+    try {
+      const dateGiven = shop.orderDate || shop.lastTransactionDate || 'N/A';
+      const placeText = shop.place || shop.area || '';
+      
+      let htmlContent = `
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Times New Roman', serif; padding: 20px; line-height: 1.6; }
+              .page-border { border: 2px solid #000; padding: 40px; min-height: 950px; position: relative; }
+              h1 { text-align: center; color: #333; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+              h3 { text-align: center; color: #666; margin-top: 0; font-weight: normal; }
+              .date-section { text-align: right; margin-top: 20px; font-weight: bold; }
+              .content { margin-top: 40px; font-size: 18px; }
+              .letter-body { margin-top: 30px; text-align: justify; }
+              .signature-section { position: absolute; bottom: 60px; left: 40px; right: 40px; display: flex; justify-content: space-between; }
+              .signature-box { text-align: center; width: 200px; }
+              .line { border-top: 1px solid #000; margin-bottom: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="page-border">
+              <h1>Shri Gajanan Enterprises</h1>
+              <h3>PEPSI Agency Ghataprabha</h3>
+              <hr style="border: 1px solid #000;" />
+              
+              <div class="date-section">
+                Date: ${new Date().toLocaleDateString('en-GB')}
+              </div>
+
+              <div class="content">
+                <p><strong>To,</strong><br/>
+                ${shop.name} ${placeText ? `(${placeText})` : ''}</p>
+                
+                <p><strong>Subject: Outstanding Debt Reminder</strong></p>
+
+                <div class="letter-body">
+                  <p>Dear Sir/Madam,</p>
+                  <p>This is a formal reminder regarding the outstanding debt amount associated with your account. As per our records, a debt of <strong>₹${shop.currentBalance || 0}</strong> was given on <strong>${dateGiven}</strong>.</p>
+                  <p>We kindly request you to provide a confirmed date for clearing this outstanding amount. Your prompt response and cooperation in this matter will be highly appreciated.</p>
+                </div>
+
+                <p style="margin-top: 60px;"><strong>When will you give (Expected Date):</strong> ___________________________</p>
+              </div>
+              
+              <div class="signature-section">
+                <div class="signature-box">
+                  <div class="line"></div>
+                  <p>Agency Signature</p>
+                </div>
+                <div class="signature-box">
+                  <div class="line"></div>
+                  <p>Shop Owner Signature</p>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      if (Platform.OS === 'web') {
+        const generatePdf = () => {
+          const opt = {
+            margin:       10,
+            filename:     `Debt_Letter_${shop.name}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+          window.html2pdf().set(opt).from(htmlContent).save();
+        };
+
+        if (!window.html2pdf) {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+          script.onload = generatePdf;
+          document.body.appendChild(script);
+        } else {
+          generatePdf();
+        }
+      } else {
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(uri);
+        } else {
+          alert('Sharing is not available on this device');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating debt letter:', error);
+      alert('Failed to generate Debt Letter');
+    }
+  };
+
   const generateShopMessage = (shop, assignedVehicle, isWhatsApp = false) => {
     let msg = isWhatsApp ? `*Shri Gajanan Enterprises PEPSI Agency Ghataprabha*\n\n` : `Shri Gajanan Enterprises PEPSI Agency Ghataprabha\n\n`;
     
@@ -261,18 +357,16 @@ export default function ShopsScreen({ navigation }) {
     if (isWhatsApp) {
       msg += `🏬 *Shop:* ${shop.name} ${placeStr}\n`;
       msg += `📅 *Date Given:* ${dateGiven}\n`;
-      msg += `💰 *Total Balance: ₹${shop.currentBalance}*\n`;
-      msg += `👤 *Salesman:* ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
+      msg += `💰 *Total Balance: ₹${shop.currentBalance}*\n\n`;
       if (shop.currentBalance > 0) {
-        msg += `Please arrange for the payment at the earliest.`;
+        msg += `Please let us know how long it will take to clear this payment.`;
       }
     } else {
       msg += `🏬 Shop: ${shop.name} ${placeStr}\n`;
       msg += `📅 Date Given: ${dateGiven}\n`;
-      msg += `💰 Total Balance: ₹${shop.currentBalance}\n`;
-      msg += `👤 Salesman: ${assignedVehicle?.salesman || 'Unknown'} (${assignedVehicle?.salesmanMobile || ''})\n\n`;
+      msg += `💰 Total Balance: ₹${shop.currentBalance}\n\n`;
       if (shop.currentBalance > 0) {
-        msg += `Please arrange for the payment at the earliest.`;
+        msg += `Please let us know how long it will take to clear this payment.`;
       }
     }
     
@@ -492,6 +586,16 @@ export default function ShopsScreen({ navigation }) {
                 )}
                 <IconButton icon="trash-can-outline" size={20} iconColor={theme.colors.error} containerColor="#FFEBEE" style={{ margin: 0 }} onPress={() => initiateDelete(item.id)} />
               </View>
+              <Button 
+                mode="outlined" 
+                icon="file-document-outline" 
+                onPress={() => generateDebtLetter(item)} 
+                style={{ marginTop: 8, borderColor: '#9C27B0', borderRadius: 8 }} 
+                textColor="#9C27B0" 
+                compact
+              >
+                Generate Debt Letter
+              </Button>
             </View>
           </View>
         </Card.Content>
